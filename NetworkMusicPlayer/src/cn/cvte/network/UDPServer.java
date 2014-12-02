@@ -1,16 +1,24 @@
 package cn.cvte.network;
 
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import cn.cvte.activities.SearchDevicesActivity;
 
 import android.content.Context;
+import android.os.Handler;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -19,11 +27,14 @@ public class UDPServer implements Runnable{
 	public final static int SERVER_PORT = 30000;
 	public final static String BROADCAST_STR = "255.255.255.255";
 	public static int TTLTime = 1;
+	//public static List<String> deviceIPList = new ArrayList<String>();
 	
 	DatagramSocket socket;
+	
 	Context mContext;
 	public UDPServer(Context context){
 		mContext = context;
+		
 		try {
 			socket = new DatagramSocket(SERVER_PORT);
 			socket.setSoTimeout(0);
@@ -42,7 +53,6 @@ public class UDPServer implements Runnable{
 	public void run() {
 		
 		try {
-			
 			DatagramPacket dp = new DatagramPacket(new byte[RECEIVE_LENGTH], RECEIVE_LENGTH);
 			System.out.println("bb");
 			socket.receive(dp);
@@ -54,20 +64,16 @@ public class UDPServer implements Runnable{
 			if ("hello".equals(command)){
 				DatagramPacket packet;
 				String serverAddress;
-				serverAddress = BroadcastClient.getLocalIpAddress(mContext).toString();
+				serverAddress = BroadcastClient.getLocalIpAddress(mContext).toString().split("/")[1];
 				System.out.println("ip:"+serverAddress);
 				byte[] sendMsg = ("welcome"+"#"+serverAddress).getBytes();
 				packet = new DatagramPacket(sendMsg,sendMsg.length,
 						InetAddress.getByName(address), BroadcastClient.CLIENT_PORT);
-				socket.send(packet);//·¢ËÍ±¨ÎÄ
-			}else if ("welcome".equals(command)){
-				
+				socket.send(packet);
 			}
 		} catch (UnknownHostException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
@@ -78,29 +84,6 @@ public class UDPServer implements Runnable{
 		
 	}
 	
-	void tcpConnect(String address){
-		Socket s = new Socket("10.140.86.98", 5858);  
-        
-        System.out.println( "remote socket " + s.getRemoteSocketAddress());  
-          
-        InputStream in = s.getInputStream();  
-          
-        InputStreamReader reader = new InputStreamReader(in);  
-          
-        char [] cbuf = new char[100];  
-        int len = reader.read(cbuf);  
-        StringBuilder sb = new StringBuilder(100);  
-          
-        sb.append(cbuf, 0, len);  
-        System.out.println(sb.toString());  
-          
-        OutputStreamWriter writer = new OutputStreamWriter(s.getOutputStream());  
-          
-        writer.write("from client");  
-          
-        writer.close();  
-        reader.close();  
-        s.close();  
-	}
+	
 	
 }

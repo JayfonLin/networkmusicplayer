@@ -5,6 +5,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 
 import android.content.Context;
@@ -14,12 +15,19 @@ import android.net.wifi.WifiManager;
 import cn.cvte.activities.SearchDevicesActivity;
 
 public class BroadcastClient implements Runnable{
-	
+	static final int CLIENT_PORT = 9998;
 	MulticastSocket multiSocket;
 	DatagramSocket socket;
 	Context mContext;
-	public BroadcastClient(DatagramSocket pSocket, Context context) {
-		socket = pSocket;
+	public BroadcastClient(Context context) {
+		try {
+			socket = new DatagramSocket(CLIENT_PORT);
+			socket.setBroadcast(true);
+			socket.setSoTimeout(0);
+		} catch (SocketException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		mContext = context;
 	}
 	@Override
@@ -31,7 +39,7 @@ public class BroadcastClient implements Runnable{
 			byte[] sendMsg = ("hello"+"#"+serverAddress).getBytes();
 			DatagramPacket packet;
 			packet = new DatagramPacket(sendMsg,sendMsg.length,
-					InetAddress.getByName(UDPServer.BROADCAST_STR), 30000);
+					InetAddress.getByName(UDPServer.BROADCAST_STR), UDPServer.SERVER_PORT);
 			socket.send(packet);//发送报文
 			//socket.disconnect();//断开套接字
 			//socket.close();//关闭套接字

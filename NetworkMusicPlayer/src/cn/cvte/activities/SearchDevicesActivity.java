@@ -4,7 +4,10 @@ import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.net.SocketException;
+import java.util.Timer;
 
 import cn.cvte.network.BroadcastClient;
 import cn.cvte.network.UDPServer;
@@ -24,40 +27,40 @@ public class SearchDevicesActivity extends Activity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.devices_list);
-		try {
-			ds = new DatagramSocket(30000);
-			//ds.setBroadcast(true);
-			ds.setSoTimeout(0);
-			
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			System.out.println("IOException");
-			e.printStackTrace();
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			System.out.println("Exception");
-			e.printStackTrace();
-		}
-		final DatagramSocket socket;
-		try {
-			socket = new DatagramSocket(9998);
-			socket.setBroadcast(true);
-			socket.setSoTimeout(0);
-			Thread thread = new Thread(new UDPServer(ds));
-			thread.start();
-			Button btn = (Button)findViewById(R.id.button1);
-			btn.setOnClickListener(new OnClickListener() {
-				@Override
-				public void onClick(View arg0) {
-					Thread t = new Thread(new BroadcastClient(socket, SearchDevicesActivity.this));
-					t.start();
-				}
-			});
-		} catch (SocketException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 		
+		Thread thread = new Thread(new UDPServer(ds));
+		thread.start();
+		Button btn = (Button)findViewById(R.id.button1);
+		btn.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View arg0) {
+				Thread t = new Thread(new BroadcastClient(SearchDevicesActivity.this));
+				t.start();
+			}
+		});
+		
+		ServerSocket miroSocket = null;
+		Socket minetSocket = null;
+		int serverPort = 6789;
+		
+		try{
+			miroSocket = new ServerSocket(serverPort);
+			System.out.println("welcome to miro...");
+			while(true){
+				minetSocket = miroSocket.accept();
+				System.out.println("accept");
+				/*ProcessThread pt = new ProcessThread(minetSocket, onlineUserList);
+                Thread thread = new Thread(pt);   
+				threadPool.execute(thread);*/
+			}
+		} catch (Exception exception){
+			exception.printStackTrace();
+		} finally {
+			/*try{
+				miroSocket.close();
+				threadPool.shutdown();
+			} catch (Exception exception){}*/
+		}
 	}
 
 	@Override

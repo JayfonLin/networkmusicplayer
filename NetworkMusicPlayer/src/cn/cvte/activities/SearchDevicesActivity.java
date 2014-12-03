@@ -17,9 +17,11 @@ import java.util.Timer;
 
 import cn.cvte.network.BroadcastClient;
 import cn.cvte.network.ProcessThread;
+import cn.cvte.network.TCPClient;
 import cn.cvte.network.UDPServer;
 import cn.cvte.networkmusicplayer.R;
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -27,15 +29,19 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
+import android.widget.Toast;
 
 public class SearchDevicesActivity extends Activity {
 	DatagramSocket ds;
 	public static final int TCPSERVER_PORT = 6789;
 	ListView deviceLV;
 	public static List<Map<String, Object>> deviceInfoList;
+	public static TCPClient tcpClient;
 	Handler mHandler;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -94,6 +100,23 @@ public class SearchDevicesActivity extends Activity {
 				threadPool.shutdown();
 			} catch (Exception exception){}*/
 		}
+		deviceLV.setOnItemClickListener(new OnItemClickListener() {
+
+			@Override
+			public void onItemClick(AdapterView<?> arg0, View arg1, int arg2,
+					long arg3) {
+				String address = deviceInfoList.get(arg2).get("ip").toString();
+				tcpClient = new TCPClient(address);
+				if (tcpClient == null){
+					Toast.makeText(SearchDevicesActivity.this, "该设备连接不上", Toast.LENGTH_SHORT).show();
+				}else{
+					Intent intent = new Intent(SearchDevicesActivity.this, MusicListActivity.class);
+					intent.putExtra("address", address);
+					startActivity(intent);
+					finish();
+				}
+			}
+		});
 	}
 	
 	void setData(){

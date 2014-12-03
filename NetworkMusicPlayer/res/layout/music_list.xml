@@ -8,14 +8,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content" >
 
-        <Button
-            android:id="@+id/button1"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentLeft="true"
-            android:layout_alignParentTop="true"
-            android:layout_marginLeft="24dp"
-            android:text="扫描音乐文件" />
+      
 
         <Button
             android:id="@+id/button2"
@@ -25,6 +18,15 @@
             android:layout_alignParentTop="true"
             android:layout_marginRight="47dp"
             android:text="其他设备" />
+
+        <TextView
+            android:id="@+id/textView1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_marginRight="54dp"
+            android:layout_toLeftOf="@+id/button2"
+            android:text="" />
 
     </RelativeLayout>
 

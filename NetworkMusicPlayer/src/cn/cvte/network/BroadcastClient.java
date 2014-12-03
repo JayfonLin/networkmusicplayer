@@ -29,9 +29,7 @@ public class BroadcastClient implements Runnable{
 	static DatagramSocket socket;
 	Context mContext;
 	Handler mHandler;
-	static Socket clientSocket;
-	DataOutputStream outToServer;
-	BufferedReader inFromServer;
+
 	public BroadcastClient(Context context, Handler pHandler) {
 		mHandler = pHandler;
 		try {
@@ -58,9 +56,7 @@ public class BroadcastClient implements Runnable{
 			socket.send(packet);//·¢ËÍ±¨ÎÄ
 			
 			DatagramPacket dp = new DatagramPacket(new byte[RECEIVE_LENGTH], RECEIVE_LENGTH);
-			System.out.println("bb");
 			socket.receive(dp);
-			System.out.println("aa");
 			String msg = new String(dp.getData()).trim();
 			System.out.println(msg);
 			String command = msg.split("#")[0];
@@ -78,7 +74,6 @@ public class BroadcastClient implements Runnable{
 					Map<String, Object> map = new HashMap<String, Object>();
 			        map.put("ip", address);
 					SearchDevicesActivity.deviceInfoList.add(map);
-					//tcpConnect(address);
 					mHandler.sendEmptyMessage(0);
 				}
 			}
@@ -102,32 +97,7 @@ public class BroadcastClient implements Runnable{
                         (ipAddress & 0xff), (ipAddress >> 8 & 0xff),
                         (ipAddress >> 16 & 0xff), (ipAddress >> 24 & 0xff)));
     }
-	
-	void tcpConnect(String address) throws UnknownHostException, IOException{
-		if (outToServer != null){
-			outToServer.close();
-			outToServer = null;
-		}
-		if (inFromServer != null){
-			inFromServer.close();
-			inFromServer = null;
-		}
-		if (clientSocket != null && !clientSocket.isClosed()){
-			clientSocket.close();
-			clientSocket = null;
-		}
-		clientSocket = new Socket(InetAddress.getByName(address),
-				SearchDevicesActivity.TCPSERVER_PORT);
-		if (outToServer != null){
-			outToServer.close();
-			outToServer = null;
-		}
-		outToServer = new DataOutputStream(clientSocket.getOutputStream());
-		inFromServer = new BufferedReader(
-				new InputStreamReader(clientSocket.getInputStream()));
-		outToServer.writeUTF("musicList\n");
-	}
-	
+
 	public static InetAddress getBroadcastAddress(Context context) throws IOException {
 	    WifiManager wifi = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
 	    DhcpInfo dhcp = wifi.getDhcpInfo();

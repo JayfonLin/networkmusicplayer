@@ -18,6 +18,7 @@
         android:theme="@style/AppTheme" >
         <activity
             android:name="cn.cvte.activities.SearchDevicesActivity"
+          
             android:label="@string/app_name" >
             
         </activity>

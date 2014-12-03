@@ -18,6 +18,7 @@ import cn.cvte.networkmusicplayer.R;
 public class MusicListAdapter extends BaseAdapter{
 	List<Map<String, Object>> musicInfoList;
 	private LayoutInflater mInflater;
+	
 	public MusicListAdapter(Context context, List<Map<String, Object>> mil){
 		musicInfoList = mil;
 		mInflater = LayoutInflater.from(context);
@@ -55,23 +56,43 @@ public class MusicListAdapter extends BaseAdapter{
 		}else{
 			viewHolder = (ViewHolder) convertView.getTag();
 		}
-		String name = itemMap.get(MediaStore.Audio.Media.DISPLAY_NAME).toString();
-		int i = name.lastIndexOf(".");
-		if (i != -1)
-			name = name.substring(0, name.lastIndexOf("."));
-		viewHolder.name_tv.setText(name);
-		int size = Integer.parseInt(itemMap.get(MediaStore.Audio.Media.SIZE).toString());
-		float f_size = size/(1024f*1024f);
-		String size_str = format(f_size);
-		viewHolder.size_tv.setText(size_str+"M");
-		int time = Integer.parseInt(itemMap.get(MediaStore.Audio.Media.DURATION).toString());
-		time/=1000;
-		int minutes = time/60;
-		int seconds = time%60;
-		String timeStr = minutes+":"+String.format("%02d", seconds); 
-		viewHolder.duration_tv.setText(timeStr);
-		viewHolder.artist_tv.setText(itemMap.get(MediaStore.Audio.Media.ARTIST).toString());
-		viewHolder.data_tv.setText(itemMap.get(MediaStore.Audio.Media.DATA).toString());
+		if (!itemMap.get(MediaStore.Audio.Media.DISPLAY_NAME).toString().equals(MusicFile.UNKNOW)){
+			String name = itemMap.get(MediaStore.Audio.Media.DISPLAY_NAME).toString();
+			int i = name.lastIndexOf(".");
+			if (i != -1)
+				name = name.substring(0, name.lastIndexOf("."));
+			viewHolder.name_tv.setText(name);
+		}else{
+			viewHolder.name_tv.setText("<unknow>");
+		}
+		if (!itemMap.get(MediaStore.Audio.Media.SIZE).toString().equals(MusicFile.UNKNOW)){
+			int size = Integer.parseInt(itemMap.get(MediaStore.Audio.Media.SIZE).toString());
+			float f_size = size/(1024f*1024f);
+			String size_str = format(f_size);
+			viewHolder.size_tv.setText(size_str+"M");
+		}else {
+			viewHolder.size_tv.setText("<unknow>");
+		}
+		if (!itemMap.get(MediaStore.Audio.Media.DURATION).equals(MusicFile.UNKNOW)){
+			int time = Integer.parseInt(itemMap.get(MediaStore.Audio.Media.DURATION).toString());
+			time/=1000;
+			int minutes = time/60;
+			int seconds = time%60;
+			String timeStr = minutes+":"+String.format("%02d", seconds); 
+			viewHolder.duration_tv.setText(timeStr);
+		}else {
+			viewHolder.duration_tv.setText("<unknow>");
+		}
+		if (!MusicFile.UNKNOW.equals(itemMap.get(MediaStore.Audio.Media.ARTIST))){
+			viewHolder.artist_tv.setText(itemMap.get(MediaStore.Audio.Media.ARTIST).toString());
+		}else{
+			viewHolder.artist_tv.setText("<unknow>");
+		}
+		if (!MusicFile.UNKNOW.equals(itemMap.get(MediaStore.Audio.Media.DATA))){
+			viewHolder.data_tv.setText(itemMap.get(MediaStore.Audio.Media.DATA).toString());
+		}else{
+			viewHolder.data_tv.setText("<unknow>");
+		}
 		return convertView;
 	}
 	

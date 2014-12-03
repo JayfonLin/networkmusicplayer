@@ -25,8 +25,9 @@ import android.widget.Toast;
 public class UDPServer implements Runnable{
 	final static int RECEIVE_LENGTH = 1024;
 	public final static int SERVER_PORT = 30000;
-	public final static String BROADCAST_STR = "255.255.255.255";
+	//public final static String BROADCAST_STR = "255.255.255.255";
 	public static int TTLTime = 1;
+	boolean accept = true;
 	//public static List<String> deviceIPList = new ArrayList<String>();
 	
 	DatagramSocket socket;
@@ -53,23 +54,27 @@ public class UDPServer implements Runnable{
 	public void run() {
 		
 		try {
-			DatagramPacket dp = new DatagramPacket(new byte[RECEIVE_LENGTH], RECEIVE_LENGTH);
-			System.out.println("bb");
-			socket.receive(dp);
-			System.out.println("aa");
-			String msg = new String(dp.getData()).trim();
-			System.out.println(msg);
-			String command = msg.split("#")[0];
-			String address = msg.split("#")[1];
-			if ("hello".equals(command)){
-				DatagramPacket packet;
-				String serverAddress;
-				serverAddress = BroadcastClient.getLocalIpAddress(mContext).toString().split("/")[1];
-				System.out.println("ip:"+serverAddress);
-				byte[] sendMsg = ("welcome"+"#"+serverAddress).getBytes();
-				packet = new DatagramPacket(sendMsg,sendMsg.length,
-						InetAddress.getByName(address), BroadcastClient.CLIENT_PORT);
-				socket.send(packet);
+			while (accept){
+				DatagramPacket dp = new DatagramPacket(new byte[RECEIVE_LENGTH], RECEIVE_LENGTH);
+				System.out.println("bb");
+				socket.receive(dp);
+				System.out.println("aa");
+				String msg = new String(dp.getData()).trim();
+				System.out.println(msg);
+				String command = msg.split("#")[0];
+				String address = msg.split("#")[1];
+				if ("hello".equals(command)){
+					DatagramPacket packet;
+					String serverAddress;
+					serverAddress = BroadcastClient.getLocalIpAddress(mContext).toString().split("/")[1];
+					System.out.println("ip:"+serverAddress);
+					if (!address.equals(serverAddress)){
+						byte[] sendMsg = ("welcome"+"#"+serverAddress).getBytes();
+						packet = new DatagramPacket(sendMsg,sendMsg.length,
+								InetAddress.getByName(address), BroadcastClient.CLIENT_PORT);
+						socket.send(packet);
+					}
+				}
 			}
 		} catch (UnknownHostException e) {
 			e.printStackTrace();

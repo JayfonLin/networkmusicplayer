@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Timer;
 
 import cn.cvte.network.BroadcastClient;
+import cn.cvte.network.ProcessThread;
 import cn.cvte.network.UDPServer;
 import cn.cvte.networkmusicplayer.R;
 import android.app.Activity;
@@ -80,9 +81,10 @@ public class SearchDevicesActivity extends Activity {
 				BufferedReader inFromClient = new BufferedReader(
 						new InputStreamReader(mSocket.getInputStream()));
 				System.out.println(inFromClient.readLine());
-				/*ProcessThread pt = new ProcessThread(minetSocket, onlineUserList);
-                Thread thread = new Thread(pt);   
-				threadPool.execute(thread);*/
+				ProcessThread pt = new ProcessThread(mSocket);
+                Thread thread2 = new Thread(pt);   
+                thread2.start();
+				//threadPool.execute(thread);
 			}
 		} catch (Exception exception){
 			exception.printStackTrace();

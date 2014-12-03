@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import android.content.Context;
+import android.net.DhcpInfo;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Handler;
@@ -25,9 +26,12 @@ public class BroadcastClient implements Runnable{
 	static final int CLIENT_PORT = 9998;
 	final static int RECEIVE_LENGTH = 1024;
 	MulticastSocket multiSocket;
-	DatagramSocket socket;
+	static DatagramSocket socket;
 	Context mContext;
 	Handler mHandler;
+	static Socket clientSocket;
+	DataOutputStream outToServer;
+	BufferedReader inFromServer;
 	public BroadcastClient(Context context, Handler pHandler) {
 		mHandler = pHandler;
 		try {
@@ -36,6 +40,7 @@ public class BroadcastClient implements Runnable{
 			socket.setSoTimeout(0);
 		} catch (SocketException e) {
 			// TODO Auto-generated catch block
+			System.out.println("Do not support broadcast");
 			e.printStackTrace();
 		}
 		mContext = context;
@@ -49,7 +54,7 @@ public class BroadcastClient implements Runnable{
 			byte[] sendMsg = ("hello"+"#"+serverAddress).getBytes();
 			DatagramPacket packet;
 			packet = new DatagramPacket(sendMsg,sendMsg.length,
-					InetAddress.getByName(UDPServer.BROADCAST_STR), UDPServer.SERVER_PORT);
+					getBroadcastAddress(mContext), UDPServer.SERVER_PORT);
 			socket.send(packet);//发送报文
 			
 			DatagramPacket dp = new DatagramPacket(new byte[RECEIVE_LENGTH], RECEIVE_LENGTH);
@@ -62,11 +67,20 @@ public class BroadcastClient implements Runnable{
 			String address = msg.split("#")[1];
 			if ("welcome".equals(command)){
 				//deviceIPList.add(address);
-				Map<String, Object> map = new HashMap<String, Object>();
-		        map.put("ip", address);
-				SearchDevicesActivity.deviceInfoList.add(map);
-				tcpConnect(address);
-				mHandler.sendEmptyMessage(0);
+				boolean flag = true;
+				for (Map<String, Object> map: SearchDevicesActivity.deviceInfoList){
+					if (map.containsValue(address)){
+						flag = false;
+						break;
+					}
+				}
+				if (flag){
+					Map<String, Object> map = new HashMap<String, Object>();
+			        map.put("ip", address);
+					SearchDevicesActivity.deviceInfoList.add(map);
+					//tcpConnect(address);
+					mHandler.sendEmptyMessage(0);
+				}
 			}
 			//socket.disconnect();//断开套接字
 			//socket.close();//关闭套接字
@@ -90,11 +104,40 @@ public class BroadcastClient implements Runnable{
     }
 	
 	void tcpConnect(String address) throws UnknownHostException, IOException{
-		Socket clientSocket = new Socket(InetAddress.getByName(address),
+		if (outToServer != null){
+			outToServer.close();
+			outToServer = null;
+		}
+		if (inFromServer != null){
+			inFromServer.close();
+			inFromServer = null;
+		}
+		if (clientSocket != null && !clientSocket.isClosed()){
+			clientSocket.close();
+			clientSocket = null;
+		}
+		clientSocket = new Socket(InetAddress.getByName(address),
 				SearchDevicesActivity.TCPSERVER_PORT);
-		DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
-		BufferedReader inFromServer = new BufferedReader(
+		if (outToServer != null){
+			outToServer.close();
+			outToServer = null;
+		}
+		outToServer = new DataOutputStream(clientSocket.getOutputStream());
+		inFromServer = new BufferedReader(
 				new InputStreamReader(clientSocket.getInputStream()));
-		outToServer.writeUTF("high");
+		outToServer.writeUTF("musicList\n");
+	}
+	
+	public static InetAddress getBroadcastAddress(Context context) throws IOException {
+	    WifiManager wifi = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
+	    DhcpInfo dhcp = wifi.getDhcpInfo();
+	    // handle null somehow
+
+	    int broadcast = (dhcp.ipAddress & dhcp.netmask) | ~dhcp.netmask;
+	    byte[] quads = new byte[4];
+	    for (int k = 0; k < 4; k++)
+	      quads[k] = (byte) ((broadcast >> k * 8) & 0xFF);
+	    System.out.println("broadcast address:"+InetAddress.getByAddress(quads).toString());
+	    return InetAddress.getByAddress(quads);
 	}
 }

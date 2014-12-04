@@ -50,7 +50,7 @@ public class MusicListActivity extends Activity{
 		}else
 			deviceName = "我的设备";
 		dialog = new ProgressDialog(this);
-		dialog.setCancelable(false);
+		dialog.setCancelable(true);
 	}
 	
 	private void findViews(){

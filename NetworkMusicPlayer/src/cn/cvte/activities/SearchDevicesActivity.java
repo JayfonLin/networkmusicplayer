@@ -68,7 +68,7 @@ public class SearchDevicesActivity extends Activity {
 		deviceLV.setAdapter(adapter);
 		btn = (Button)findViewById(R.id.button1);
 		dialog = new ProgressDialog(this);
-		dialog.setCancelable(false);
+		dialog.setCancelable(true);
 	}
 	private void setupService(){
 		mHandler = new Handler(){

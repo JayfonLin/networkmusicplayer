@@ -12,6 +12,11 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+
 import cn.cvte.activities.MPApplication;
 import cn.cvte.activities.SearchDevicesActivity;
 import cn.cvte.music.MusicInfo;
@@ -61,17 +66,23 @@ public class TCPClient{
 			String command = inFromServer.readLine();
 			System.out.println("command: "+command);
 			if ("return_music_list".equals(command)){
-				String str = inFromServer.readLine();
-				int size = Integer.parseInt(str);
-				ObjectInputStream ois = new ObjectInputStream(clientSocket.getInputStream());
-				for (int i = 0; i < size; ++i){
-					MusicInfo mi;
-					try {
-						mi = (MusicInfo) ois.readObject();
+				String jsonStr = inFromServer.readLine();
+				JSONArray ja;
+				try {
+					ja = new JSONArray(jsonStr);
+					for (int i = 0; i < ja.length(); ++i){
+						JSONObject jo = ja.getJSONObject(i);
+						MusicInfo mi = new MusicInfo();
+						mi.id = jo.getString("id");
+						mi.artist = jo.getString("artist");
+						mi.data = jo.getString("data");
+						mi.duration = jo.getString("duration");
+						mi.name = jo.getString("name");
+						mi.size = jo.getString("size");
 						list.add(mi);
-					} catch (ClassNotFoundException e) {
-						e.printStackTrace();
 					}
+				} catch (JSONException e) {
+					e.printStackTrace();
 				}
 			}
 			

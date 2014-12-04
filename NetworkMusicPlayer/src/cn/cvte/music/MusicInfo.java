@@ -6,8 +6,9 @@ import java.util.Map;
 import android.provider.MediaStore;
 
 public class MusicInfo implements Serializable{
-	String id, name, artist, duration, size, data;
-	
+	private static final long serialVersionUID = 1L;
+	public String id, name, artist, duration, size, data;
+	public MusicInfo(){}
 	public MusicInfo(Map<String, Object> map){
 		id = map.get(MediaStore.Audio.Media._ID).toString();
 		name = map.get(MediaStore.Audio.Media.DISPLAY_NAME).toString();

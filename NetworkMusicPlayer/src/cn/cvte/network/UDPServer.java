@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import cn.cvte.activities.MPApplication;
 import cn.cvte.activities.SearchDevicesActivity;
 
 import android.content.Context;
@@ -25,40 +26,37 @@ import android.widget.Toast;
 public class UDPServer implements Runnable{
 	final static int RECEIVE_LENGTH = 1024;
 	public final static int SERVER_PORT = 30000;
-	//public final static String BROADCAST_STR = "255.255.255.255";
 	public static int TTLTime = 1;
-	boolean accept = true;
-	//public static List<String> deviceIPList = new ArrayList<String>();
-	
+	Handler mHandler;
 	DatagramSocket socket;
 	
 	Context mContext;
 	public UDPServer(Context context){
 		mContext = context;
-		
 		try {
 			socket = new DatagramSocket(SERVER_PORT);
 			socket.setSoTimeout(0);
 			
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			System.out.println("IOException");
 			e.printStackTrace();
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			System.out.println("Exception");
 			e.printStackTrace();
 		}
 	}
+	
+	public void setHandler(Handler pHandler){
+		mHandler = pHandler;
+	}
+	
 	@Override
 	public void run() {
 		
 		try {
-			while (accept){
+			while (MPApplication.online){
 				DatagramPacket dp = new DatagramPacket(new byte[RECEIVE_LENGTH], RECEIVE_LENGTH);
-				System.out.println("bb");
 				socket.receive(dp);
-				System.out.println("aa");
 				String msg = new String(dp.getData()).trim();
 				System.out.println(msg);
 				String command = msg.split("#")[0];
@@ -71,8 +69,23 @@ public class UDPServer implements Runnable{
 					if (!address.equals(serverAddress)){
 						byte[] sendMsg = ("welcome"+"#"+serverAddress).getBytes();
 						packet = new DatagramPacket(sendMsg,sendMsg.length,
-								InetAddress.getByName(address), BroadcastClient.CLIENT_PORT);
+								InetAddress.getByName(address), SERVER_PORT);
 						socket.send(packet);
+					}
+				}else if ("welcome".equals(command)){
+					boolean flag = true;
+					for (Map<String, Object> map: SearchDevicesActivity.deviceInfoList){
+						if (map.containsValue(address)){
+							flag = false;
+							break;
+						}
+					}
+					if (flag){
+						Map<String, Object> map = new HashMap<String, Object>();
+				        map.put("ip", address);
+						SearchDevicesActivity.deviceInfoList.add(map);
+						if (mHandler != null)
+							mHandler.sendEmptyMessage(0);
 					}
 				}
 			}
@@ -81,14 +94,9 @@ public class UDPServer implements Runnable{
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} finally{
-		
+			socket.close();
 		}
-		
 	}
-	
-	
-	
 }

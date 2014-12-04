@@ -8,48 +8,56 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.Map;
 
+import cn.cvte.activities.MPApplication;
 import cn.cvte.music.MusicFile;
 import cn.cvte.music.MusicInfo;
 
 public class ProcessThread implements Runnable{
+	
 	Socket socket;
-	public boolean online;
 	BufferedReader inFromClient;
 	DataOutputStream outToClient;
 	String clientSentence;
+	
 	public ProcessThread(Socket pSocket){
 		socket = pSocket;
-		online = true;
 		try {
 			inFromClient = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			outToClient = new DataOutputStream(socket.getOutputStream());
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
 	}
+	
 	@Override
 	public void run() {
-		while (online){
+		while (MPApplication.online){
 			try {
 				clientSentence = inFromClient.readLine();
 				if (clientSentence != null){
+					System.out.println(clientSentence);
 					if ("request_music_list".equals(clientSentence)){
 						System.out.println("return musicList");
-						outToClient.writeUTF("return_music_list\n");
-						outToClient.writeUTF(MusicFile.musicInfoList.size()+"\n");
+						outToClient.writeBytes("return_music_list\n");
+						outToClient.writeBytes(MusicFile.musicInfoList.size()+"\n");
 						ObjectOutputStream oos = new ObjectOutputStream(outToClient);
-						for (Map<String, Object> map: MusicFile.musicInfoList)
-							oos.writeObject(new MusicInfo(map));
-						outToClient.flush();
+						for (MusicInfo mi: MusicFile.musicInfoList)
+							oos.writeObject(mi);
+						oos.flush();
+						//outToClient.flush();
 					}
 				}
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
+				break;
 			}
-			
+		}
+		try {
+			socket.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 

@@ -21,7 +21,9 @@ import cn.cvte.network.TCPClient;
 import cn.cvte.network.UDPServer;
 import cn.cvte.networkmusicplayer.R;
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -37,23 +39,38 @@ import android.widget.SimpleAdapter;
 import android.widget.Toast;
 
 public class SearchDevicesActivity extends Activity {
-	DatagramSocket ds;
-	public static final int TCPSERVER_PORT = 6789;
-	ListView deviceLV;
+	
+	/**
+	 * static field
+	 */
 	public static List<Map<String, Object>> deviceInfoList;
-	public static TCPClient tcpClient;
+	
+	DatagramSocket ds;
+	ListView deviceLV;
 	Handler mHandler;
+	Button btn;
+	ProgressDialog dialog;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.devices_list);
 		deviceLV = (ListView) findViewById(R.id.listView1);
 		setData();
+		initViews();
+		setupService();
+		setClick();
+		
+	}
+	private void initViews(){
 		SimpleAdapter adapter = new SimpleAdapter(this, deviceInfoList, R.layout.device_item,
                 new String[]{"ip"},
                 new int[]{R.id.ip_tv});
-		
 		deviceLV.setAdapter(adapter);
+		btn = (Button)findViewById(R.id.button1);
+		dialog = new ProgressDialog(this);
+		dialog.setCancelable(false);
+	}
+	private void setupService(){
 		mHandler = new Handler(){
 			@Override
 	        public void handleMessage(Message msg) {
@@ -64,86 +81,73 @@ public class SearchDevicesActivity extends Activity {
 	            }
 			}
 		};
-		Thread thread = new Thread(new UDPServer(SearchDevicesActivity.this));
-		thread.start();
-		Button btn = (Button)findViewById(R.id.button1);
+		MPApplication.udpServer.setHandler(mHandler);
+		
 		btn.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View arg0) {
-				Thread t = new Thread(new BroadcastClient(SearchDevicesActivity.this, mHandler));
+				Thread t = new Thread(new BroadcastClient(SearchDevicesActivity.this));
 				t.start();
 			}
 		});
-		
-		ServerSocket serverSocket = null;
-		Socket mSocket = null;	
-		
-		try{
-			serverSocket = new ServerSocket(TCPSERVER_PORT);
-			System.out.println("welcome to miro...");
-			while(true){
-				mSocket = serverSocket.accept();
-				System.out.println("accept");
-				BufferedReader inFromClient = new BufferedReader(
-						new InputStreamReader(mSocket.getInputStream()));
-				System.out.println(inFromClient.readLine());
-				ProcessThread pt = new ProcessThread(mSocket);
-                Thread thread2 = new Thread(pt);   
-                thread2.start();
-				//threadPool.execute(thread);
-			}
-		} catch (Exception exception){
-			exception.printStackTrace();
-		} finally {
-			/*try{
-				miroSocket.close();
-				threadPool.shutdown();
-			} catch (Exception exception){}*/
-		}
+	}
+	private void setData(){
+		deviceInfoList = new ArrayList<Map<String, Object>>();
+	}
+	
+	private void setClick(){
 		deviceLV.setOnItemClickListener(new OnItemClickListener() {
 
 			@Override
 			public void onItemClick(AdapterView<?> arg0, View arg1, int arg2,
 					long arg3) {
 				String address = deviceInfoList.get(arg2).get("ip").toString();
-				tcpClient = new TCPClient(address);
-				if (tcpClient == null){
-					Toast.makeText(SearchDevicesActivity.this, "该设备连接不上", Toast.LENGTH_SHORT).show();
-				}else{
-					Intent intent = new Intent(SearchDevicesActivity.this, MusicListActivity.class);
-					intent.putExtra("address", address);
-					startActivity(intent);
-					finish();
+				if (MPApplication.tcpClient != null){
+					try {
+						MPApplication.tcpClient.clientSocket.close();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					MPApplication.tcpClient = null;
 				}
+				ConnectTask task = new ConnectTask();
+				task.execute(address);
+				
 			}
 		});
 	}
 	
-	void setData(){
-		deviceInfoList = new ArrayList<Map<String, Object>>();
-		 
-        /*Map<String, Object> map = new HashMap<String, Object>();
-        map.put("ip", "255.255.255.255");
-        deviceInfoList.add(map);*/
- 
-	}
-
-	@Override
-	public boolean onCreateOptionsMenu(Menu menu) {
-		// Inflate the menu; this adds items to the action bar if it is present.
-		getMenuInflater().inflate(R.menu.main, menu);
-		return true;
-	}
-
-	@Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-		// Handle action bar item clicks here. The action bar will
-		// automatically handle clicks on the Home/Up button, so long
-		// as you specify a parent activity in AndroidManifest.xml.
-		int id = item.getItemId();
-		if (id == R.id.action_settings) {
-			return true;
+	class ConnectTask extends AsyncTask<String, Integer, String>
+	{
+		
+		@Override
+		protected void onPostExecute(String result) {
+			dialog.dismiss();
+			if (MPApplication.tcpClient == null){
+				Toast.makeText(SearchDevicesActivity.this, "该设备连接不上", Toast.LENGTH_SHORT).show();
+			}else{
+				Intent intent = new Intent(SearchDevicesActivity.this, MusicListActivity.class);
+				intent.putExtra("address", result);
+				startActivity(intent);
+				finish();
+			}
+			super.onPostExecute(result);
 		}
-		return super.onOptionsItemSelected(item);
+
+		@Override
+		protected void onPreExecute() {
+			dialog.show();
+			super.onPreExecute();
+		}
+
+		@Override
+		protected String doInBackground(String... arg0) {
+			MPApplication.tcpClient = new TCPClient(arg0[0]);
+			return arg0[0];
+			
+		}
+		
 	}
+
 }

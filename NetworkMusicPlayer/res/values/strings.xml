@@ -4,5 +4,12 @@
     <string name="app_name">NetworkMusicPlayer</string>
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
+    <string name="t_idle">未加载任何文件</string>
+    <string name="s_play">播放</string>
+    <string name="s_exit">退出</string>
+    <string name="t_loaded">已加载</string>
+    <string name="t_playing">正在播放</string>
+    <string name="t_pause">已暂停</string>
+    <string name="t_stop">已停止</string>
 
 </resources>

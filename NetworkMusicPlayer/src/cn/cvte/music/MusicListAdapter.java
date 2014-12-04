@@ -16,11 +16,11 @@ import android.widget.TextView;
 import cn.cvte.networkmusicplayer.R;
 
 public class MusicListAdapter extends BaseAdapter{
-	List<Map<String, Object>> musicInfoList;
+	List<MusicInfo> musicInfoList;
 	private LayoutInflater mInflater;
 	
-	public MusicListAdapter(Context context, List<Map<String, Object>> mil){
-		musicInfoList = mil;
+	public MusicListAdapter(Context context, List<MusicInfo> list){
+		musicInfoList = list;
 		mInflater = LayoutInflater.from(context);
 	}
 	@Override
@@ -43,7 +43,7 @@ public class MusicListAdapter extends BaseAdapter{
 	@Override
 	public View getView(final int position, View convertView, ViewGroup parent) {
 		ViewHolder viewHolder;
-		Map<String, Object> itemMap = (Map<String, Object>) getItem(position);
+		MusicInfo mi = (MusicInfo) getItem(position);
 		if(convertView == null){
 			convertView = mInflater.inflate(R.layout.music_item, null);
 			viewHolder = new ViewHolder();
@@ -56,49 +56,48 @@ public class MusicListAdapter extends BaseAdapter{
 		}else{
 			viewHolder = (ViewHolder) convertView.getTag();
 		}
-		if (!itemMap.get(MediaStore.Audio.Media.DISPLAY_NAME).toString().equals(MusicFile.UNKNOW)){
-			String name = itemMap.get(MediaStore.Audio.Media.DISPLAY_NAME).toString();
+		if (!MusicFile.UNKNOW.equals(mi.name)){
+			String name = mi.name;
 			int i = name.lastIndexOf(".");
 			if (i != -1)
 				name = name.substring(0, name.lastIndexOf("."));
 			viewHolder.name_tv.setText(name);
 		}else{
-			viewHolder.name_tv.setText("<unknow>");
+			viewHolder.name_tv.setText(MusicFile.UNKNOW);
 		}
-		if (!itemMap.get(MediaStore.Audio.Media.SIZE).toString().equals(MusicFile.UNKNOW)){
-			int size = Integer.parseInt(itemMap.get(MediaStore.Audio.Media.SIZE).toString());
+		if (!MusicFile.UNKNOW.equals(mi.size)){
+			long size = Long.parseLong(mi.size);
 			float f_size = size/(1024f*1024f);
 			String size_str = format(f_size);
 			viewHolder.size_tv.setText(size_str+"M");
 		}else {
-			viewHolder.size_tv.setText("<unknow>");
+			viewHolder.size_tv.setText(MusicFile.UNKNOW);
 		}
-		if (!itemMap.get(MediaStore.Audio.Media.DURATION).equals(MusicFile.UNKNOW)){
-			int time = Integer.parseInt(itemMap.get(MediaStore.Audio.Media.DURATION).toString());
+		if (!MusicFile.UNKNOW.equals(mi.duration)){
+			int time = Integer.parseInt(mi.duration);
 			time/=1000;
 			int minutes = time/60;
 			int seconds = time%60;
 			String timeStr = minutes+":"+String.format("%02d", seconds); 
 			viewHolder.duration_tv.setText(timeStr);
 		}else {
-			viewHolder.duration_tv.setText("<unknow>");
+			viewHolder.duration_tv.setText(MusicFile.UNKNOW);
 		}
-		if (!MusicFile.UNKNOW.equals(itemMap.get(MediaStore.Audio.Media.ARTIST))){
-			viewHolder.artist_tv.setText(itemMap.get(MediaStore.Audio.Media.ARTIST).toString());
+		if (!MusicFile.UNKNOW.equals(mi.artist)){
+			viewHolder.artist_tv.setText(mi.artist);
 		}else{
-			viewHolder.artist_tv.setText("<unknow>");
+			viewHolder.artist_tv.setText(MusicFile.UNKNOW);
 		}
-		if (!MusicFile.UNKNOW.equals(itemMap.get(MediaStore.Audio.Media.DATA))){
-			viewHolder.data_tv.setText(itemMap.get(MediaStore.Audio.Media.DATA).toString());
+		if (!MusicFile.UNKNOW.equals(mi.data)){
+			viewHolder.data_tv.setText(mi.data);
 		}else{
-			viewHolder.data_tv.setText("<unknow>");
+			viewHolder.data_tv.setText(MusicFile.UNKNOW);
 		}
 		return convertView;
 	}
 	
 	static class ViewHolder{
 		TextView name_tv, size_tv, duration_tv, artist_tv, data_tv;
-
 	}
 
 	/** 

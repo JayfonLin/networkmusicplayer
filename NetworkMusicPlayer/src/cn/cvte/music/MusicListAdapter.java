@@ -74,10 +74,10 @@ public class MusicListAdapter extends BaseAdapter{
 			viewHolder.size_tv.setText(MusicFile.UNKNOW);
 		}
 		if (!MusicFile.UNKNOW.equals(mi.duration)){
-			int time = Integer.parseInt(mi.duration);
+			long time = Long.parseLong(mi.duration);
 			time/=1000;
-			int minutes = time/60;
-			int seconds = time%60;
+			long minutes = time/60;
+			long seconds = time%60;
 			String timeStr = minutes+":"+String.format("%02d", seconds); 
 			viewHolder.duration_tv.setText(timeStr);
 		}else {

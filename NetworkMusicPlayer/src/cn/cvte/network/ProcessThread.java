@@ -16,10 +16,14 @@ import java.util.Map;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import android.os.Handler;
+import android.os.Message;
+
 
 import cn.cvte.activities.MPApplication;
 import cn.cvte.music.MusicFile;
 import cn.cvte.music.MusicInfo;
+import cn.cvte.music.SimpleMusicPlayerService.STATE;
 
 public class ProcessThread implements Runnable{
 	
@@ -27,6 +31,7 @@ public class ProcessThread implements Runnable{
 	BufferedReader inFromClient;
 	PrintWriter outToClient;
 	String clientSentence;
+	Handler mHandler;
 	
 	public ProcessThread(Socket pSocket){
 		socket = pSocket;
@@ -47,12 +52,48 @@ public class ProcessThread implements Runnable{
 				if (clientSentence != null){
 					System.out.println(clientSentence);
 					if ("request_music_list".equals(clientSentence)){
-						System.out.println("return musicList");
-						Charset c = Charset.forName("UTF-8");
-						outToClient.println("return_music_list");
 						String str = constructMusicList().toString();
 						outToClient.println(str);
 						outToClient.flush();
+					}else if ("select".equals(clientSentence)){
+						clientSentence = inFromClient.readLine();
+						if (mHandler != null){
+							Message msg = new Message();
+							msg.what = 0;
+							msg.obj = clientSentence;
+							mHandler.sendMessage(msg);
+						}else{
+							MPApplication.smpService.playOrPause(clientSentence);
+						}
+						outToClient.println("success");
+					}else if ("pause".equals(clientSentence)){
+						if (MPApplication.smpService.getState() == STATE.PALYING){
+							if (mHandler != null){
+								mHandler.sendEmptyMessage(1);
+							}else{
+								MPApplication.smpService.playOrPause(null);
+							}
+						}
+						outToClient.println("success");
+					}else if ("stop".equals(clientSentence)){
+						if (MPApplication.smpService.getState() != STATE.STOP){
+							if (mHandler != null){
+								mHandler.sendEmptyMessage(2);
+							}else{
+								MPApplication.smpService.stop();
+							}
+						}
+						outToClient.println("success");
+					}else if ("play".equals(clientSentence)){
+						if (MPApplication.smpService.getState() != STATE.PALYING){
+							if (mHandler != null){
+								mHandler.sendEmptyMessage(1);
+							}else{
+								MPApplication.smpService.playOrPause(null);
+							}
+						}
+						
+						outToClient.println("success");
 					}
 				}
 			} catch (IOException e) {
@@ -66,6 +107,14 @@ public class ProcessThread implements Runnable{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+	
+	public void setHandler(Handler pHandler){
+		mHandler = pHandler;
+	}
+	public void unRegisterHandler(Handler pHandler){
+		if (mHandler == pHandler)
+			mHandler = null;
 	}
 	
 	private JSONArray constructMusicList(){

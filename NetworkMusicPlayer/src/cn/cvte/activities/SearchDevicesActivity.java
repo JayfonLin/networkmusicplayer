@@ -49,6 +49,7 @@ public class SearchDevicesActivity extends Activity {
 	ListView deviceLV;
 	Handler mHandler;
 	Button btn;
+	Button myDeviceBtn;
 	ProgressDialog dialog;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -67,6 +68,7 @@ public class SearchDevicesActivity extends Activity {
                 new int[]{R.id.ip_tv});
 		deviceLV.setAdapter(adapter);
 		btn = (Button)findViewById(R.id.button1);
+		myDeviceBtn = (Button) findViewById(R.id.button2);
 		dialog = new ProgressDialog(this);
 		dialog.setCancelable(true);
 	}
@@ -90,6 +92,12 @@ public class SearchDevicesActivity extends Activity {
 				t.start();
 			}
 		});
+		myDeviceBtn.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View arg0) {
+				jumpToMusicList(null);
+			}
+		});
 	}
 	private void setData(){
 		deviceInfoList = new ArrayList<Map<String, Object>>();
@@ -102,20 +110,19 @@ public class SearchDevicesActivity extends Activity {
 			public void onItemClick(AdapterView<?> arg0, View arg1, int arg2,
 					long arg3) {
 				String address = deviceInfoList.get(arg2).get("ip").toString();
-				if (MPApplication.tcpClient != null){
-					try {
-						MPApplication.tcpClient.clientSocket.close();
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-					MPApplication.tcpClient = null;
-				}
 				ConnectTask task = new ConnectTask();
 				task.execute(address);
 				
 			}
 		});
+	}
+	
+	private void jumpToMusicList(String address){
+		Intent intent = new Intent(SearchDevicesActivity.this, MusicListActivity.class);
+		if (address != null)
+			intent.putExtra("address", address);
+		startActivity(intent);
+		finish();
 	}
 	
 	class ConnectTask extends AsyncTask<String, Integer, String>
@@ -124,13 +131,10 @@ public class SearchDevicesActivity extends Activity {
 		@Override
 		protected void onPostExecute(String result) {
 			dialog.dismiss();
-			if (MPApplication.tcpClient == null){
+			if (TCPClient.clientSocket == null){
 				Toast.makeText(SearchDevicesActivity.this, "该设备连接不上", Toast.LENGTH_SHORT).show();
 			}else{
-				Intent intent = new Intent(SearchDevicesActivity.this, MusicListActivity.class);
-				intent.putExtra("address", result);
-				startActivity(intent);
-				finish();
+				jumpToMusicList(result);
 			}
 			super.onPostExecute(result);
 		}
@@ -143,7 +147,7 @@ public class SearchDevicesActivity extends Activity {
 
 		@Override
 		protected String doInBackground(String... arg0) {
-			MPApplication.tcpClient = new TCPClient(arg0[0]);
+			new TCPClient(arg0[0]);
 			return arg0[0];
 			
 		}

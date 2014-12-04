@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -16,7 +17,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-
 import cn.cvte.activities.MPApplication;
 import cn.cvte.activities.SearchDevicesActivity;
 import cn.cvte.music.MusicInfo;
@@ -26,28 +26,16 @@ public class TCPClient{
 	 * static field
 	 */
 	public static Socket clientSocket;
-	static DataOutputStream outToServer;
+	static PrintWriter outToServer;
 	static BufferedReader inFromServer;
 	static ObjectInputStream oi;
-	//static ObjectOutputStream oo;
 	
 	public TCPClient(String address){
 		try {
-			if (outToServer != null){
-				outToServer.close();
-				outToServer = null;
-			}
-			if (inFromServer != null){
-				inFromServer.close();
-				inFromServer = null;
-			}
-			if (clientSocket != null && !clientSocket.isClosed()){
-				clientSocket.close();
-				clientSocket = null;
-			}
+			close();
 			clientSocket = new Socket(InetAddress.getByName(address),
 					cn.cvte.activities.MPApplication.TCPSERVER_PORT);
-			outToServer = new DataOutputStream(clientSocket.getOutputStream());
+			outToServer = new PrintWriter(clientSocket.getOutputStream());
 			inFromServer = new BufferedReader(
 					new InputStreamReader(clientSocket.getInputStream()));
 		} catch (UnknownHostException e) {
@@ -58,10 +46,10 @@ public class TCPClient{
 		
 	}
 	
-	public List<MusicInfo> getMusicList(){
+	public static List<MusicInfo> getMusicList(){
 		List<MusicInfo> list = new ArrayList<MusicInfo>();
 		try {
-			outToServer.writeBytes("request_music_list\n");
+			outToServer.println("request_music_list");
 			outToServer.flush();
 			String command = inFromServer.readLine();
 			System.out.println("command: "+command);
@@ -90,6 +78,63 @@ public class TCPClient{
 			e.printStackTrace();
 		}
 		return list;
+	}
+	
+	public static boolean selectMusic(String path){
+		if (outToServer != null && inFromServer != null){
+			outToServer.println("select_music");
+			outToServer.println(path);
+			outToServer.flush();
+			return judgeState();
+		}
+		return false;
+	}
+	
+	
+	
+	public static boolean simpleControl(String cm){
+		if (outToServer != null && inFromServer != null){
+			outToServer.println(cm);
+			outToServer.flush();
+			return judgeState();
+		}
+		return false;
+	}
+	
+	private static boolean judgeState(){
+		String command;
+		try {
+			command = inFromServer.readLine();
+			System.out.println("command: "+command);
+			if ("success".equals(command)){
+				return true;
+			}else
+				return false;
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return false;
+	}
+	
+	public static void close(){
+		try {
+			if (outToServer != null){
+				outToServer.close();
+				outToServer = null;
+			}
+			if (inFromServer != null){
+				inFromServer.close();
+				inFromServer = null;
+			}
+			if (clientSocket != null && !clientSocket.isClosed()){
+				clientSocket.close();
+				clientSocket = null;
+			}
+		} catch (UnknownHostException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 }

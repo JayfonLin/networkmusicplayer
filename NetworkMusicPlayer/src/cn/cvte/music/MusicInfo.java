@@ -13,7 +13,7 @@ public class MusicInfo implements Serializable{
 		id = map.get(MediaStore.Audio.Media._ID).toString();
 		name = map.get(MediaStore.Audio.Media.DISPLAY_NAME).toString();
 		artist = map.get(MediaStore.Audio.Media.ARTIST).toString();
-		duration = map.get(MediaStore.Audio.Media.SIZE).toString();
+		duration = map.get(MediaStore.Audio.Media.DURATION).toString();
 		size = map.get(MediaStore.Audio.Media.SIZE).toString();
 		data = map.get(MediaStore.Audio.Media.DATA).toString();
 	}

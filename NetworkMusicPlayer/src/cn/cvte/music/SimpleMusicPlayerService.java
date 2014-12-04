@@ -20,20 +20,13 @@ public class SimpleMusicPlayerService extends Service implements MediaPlayer.OnC
     MediaPlayer mediaPlayer = new MediaPlayer();
     STATE state = STATE.IDLE;
     private final IBinder binder = new SMPlayerBinder();
+    
     @Override
     public IBinder onBind(Intent intent) {
-        try {
-            mediaPlayer.reset();
-            String path = intent.getStringExtra("path");
-            if (path != null){
-	            mediaPlayer.setDataSource(path);
-	            mediaPlayer.prepare();
-            }
-            state = STATE.STOP;
-            mediaPlayer.setOnCompletionListener(this);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        
+        state = STATE.IDLE;
+        mediaPlayer.setOnCompletionListener(this);
+         
         return binder;
     }
     
@@ -43,8 +36,8 @@ public class SimpleMusicPlayerService extends Service implements MediaPlayer.OnC
         }
     }
     public void playOrPause(String path){
-        if (state == STATE.IDLE){
-            try{
+    	if (path != null){
+    		try{
                 mediaPlayer.reset();
                 mediaPlayer.setDataSource(path);
                 mediaPlayer.prepare();
@@ -53,7 +46,7 @@ public class SimpleMusicPlayerService extends Service implements MediaPlayer.OnC
             }catch(IOException e){
                 e.printStackTrace();
             }
-        }else if (state == STATE.PALYING){
+    	}else if (state == STATE.PALYING){
                 mediaPlayer.pause();
                 state = STATE.PAUSE;
         }else{
@@ -62,17 +55,7 @@ public class SimpleMusicPlayerService extends Service implements MediaPlayer.OnC
         }
     }
     public void stop(){
-        mediaPlayer.stop();
-        try {
-            mediaPlayer.reset();
-            mediaPlayer.prepare();
-            mediaPlayer.seekTo(0);
-        } catch (IllegalStateException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        //mediaPlayer.seekTo(0);
+    	onCompletion(mediaPlayer);
     }
     public int getDuration(){
         if (state == STATE.IDLE){
@@ -109,10 +92,8 @@ public class SimpleMusicPlayerService extends Service implements MediaPlayer.OnC
             mp.prepare();
             
         } catch (IllegalStateException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         } catch (IOException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
         mp.seekTo(0);
@@ -120,22 +101,18 @@ public class SimpleMusicPlayerService extends Service implements MediaPlayer.OnC
     }
     @Override
     public void onCreate() {
-        // TODO Auto-generated method stub
         super.onCreate();
     }
     @Override
     public void onRebind(Intent intent) {
-        // TODO Auto-generated method stub
         super.onRebind(intent);
     }
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        // TODO Auto-generated method stub
         return super.onStartCommand(intent, flags, startId);
     }
     @Override
     public boolean onUnbind(Intent intent) {
-        // TODO Auto-generated method stub
         return super.onUnbind(intent);
     }
 }

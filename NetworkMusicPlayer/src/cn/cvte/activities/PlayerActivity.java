@@ -5,6 +5,7 @@ import java.text.DecimalFormat;
 import cn.cvte.music.MusicInfo;
 import cn.cvte.music.SimpleMusicPlayerService;
 import cn.cvte.music.SimpleMusicPlayerService.STATE;
+import cn.cvte.network.TCPServer;
 import cn.cvte.networkmusicplayer.R;
 
 import android.R.menu;
@@ -12,6 +13,7 @@ import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Message;
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
@@ -27,60 +29,71 @@ import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TextView;
  
 public class PlayerActivity extends Activity {
+	
     Handler handler = new Handler();
-    SimpleMusicPlayerService smpService;
-    Button playButton, exitButton;
-    String preFile = "";
-    public MusicInfo musicInfo;
-    //public static String PATH = null;
+    Handler controlHandler;
+    
+    Button playButton, stopButton;
     TextView fileView, timeView1, timeView2;
     TextView stateTextView;
     SeekBar sb;
+    
+    String preFile = "";
+    public MusicInfo musicInfo;
     Context context = this;
     ServiceConnection sc = new ServiceConnection() {
         
         public void onServiceDisconnected(ComponentName name) {
-            smpService = null;
+            MPApplication.smpService = null;
         }
         
         public void onServiceConnected(ComponentName name, IBinder service) {
-            smpService = ((SimpleMusicPlayerService.SMPlayerBinder)service).getService();
-            updateByStatus();
+        	MPApplication.smpService = ((SimpleMusicPlayerService.SMPlayerBinder)service).getService();
+            System.out.println("onServiceConnected");
+            if (musicInfo != null){
+            	MPApplication.smpService.playOrPause(musicInfo.data);
+            }
+            
+        	updateByStatus();
         }
     };
+    
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.player_layout);
+        findViews();
+        setClicks();
         
         processIntent();
-        timeView1 = (TextView) findViewById(R.id.time1);
+        handler.post(r);
+    }
+    
+    private void findViews(){
+    	timeView1 = (TextView) findViewById(R.id.time1);
         timeView2 = (TextView) findViewById(R.id.time2);
         fileView = (TextView) findViewById(R.id.file);
         playButton = (Button) findViewById(R.id.play);
-        playButton.setOnClickListener(new OnClickListener() {
-            
-            public void onClick(View v) {
-            	System.out.println("musicinfo.data:"+musicInfo.data);
-            	System.out.println("musicInfo.name:"+musicInfo.name);
-            	if (smpService == null)
-            		System.out.println("smpService is null");
-                smpService.playOrPause(musicInfo.data);
-                fileView.setText(musicInfo.name);
-                updateByStatus();
-            }
-        });
-        exitButton = (Button) findViewById(R.id.btn_exit);
-        exitButton.setOnClickListener(new OnClickListener() {
-            
-            public void onClick(View v) {
-                Intent intent = new Intent(context, SimpleMusicPlayerService.class);
-                stopService(intent);
-                finish();
-                
-            }
-        });
+        stopButton = (Button) findViewById(R.id.stop);
         sb = (SeekBar) findViewById(R.id.seekBar1);
+        stateTextView = (TextView)findViewById(R.id.state);
+    }
+    
+    private void setClicks(){
+    	playButton.setOnClickListener(new OnClickListener() {
+            
+            public void onClick(View v) {
+            	playOrPause(null);
+            }
+        });
+        stopButton.setOnClickListener(new OnClickListener() {
+			
+			@Override
+			public void onClick(View v) {
+				stop();
+			}
+		});
+    	setHandler();
         sb.setOnSeekBarChangeListener(new OnSeekBarChangeListener() {
             
             public void onStopTrackingTouch(SeekBar seekBar) {
@@ -96,29 +109,66 @@ public class PlayerActivity extends Activity {
             public void onProgressChanged(SeekBar seekBar, int progress,
                     boolean fromUser) {
                 if  (fromUser){
-                    smpService.setCurrentPosition((float)progress/seekBar.getMax());
-                    if (progress == seekBar.getMax() && smpService.getState() == STATE.PALYING){
-                        smpService.setState(STATE.PAUSE);
+                	MPApplication.smpService.setCurrentPosition((float)progress/seekBar.getMax());
+                    if (progress == seekBar.getMax() && 
+                    		MPApplication.smpService.getState() == STATE.PALYING){
+                    	MPApplication.smpService.setState(STATE.PAUSE);
                     }
                 }
             }
         });
-        stateTextView = (TextView)findViewById(R.id.state);
-        
-        handler.post(r);
+    }
+    
+    private void playOrPause(String path){
+    	MPApplication.smpService.playOrPause(path);
+    	if (path != null){
+    		int i = path.lastIndexOf("/");
+    		if (i != -1){
+    			path = path.substring(i+1);
+    			fileView.setText(path);
+    		}
+    	}
+        updateByStatus();
+    }
+    
+    private void stop(){
+    	MPApplication.smpService.stop();
+    	updateByStatus();
+    }
+    
+    private void setHandler(){
+    	controlHandler = new Handler(){
+
+			@Override
+			public void handleMessage(Message msg) {
+				switch(msg.what){
+				case 0:
+					String path = (String) msg.obj;
+					playOrPause(path);
+					break;
+				case 1:
+					playOrPause(null);
+					break;
+				case 2:
+					stop();
+					break;
+				}
+			}
+    		
+    	};
+    	if (TCPServer.pt != null){
+    		TCPServer.pt.setHandler(controlHandler);
+    	}
     }
     
     private void processIntent(){
     	Intent intent = getIntent();
     	if (intent.getSerializableExtra("music") instanceof MusicInfo){
     		musicInfo = (MusicInfo) intent.getSerializableExtra("music");
-    	}else{
-    		System.out.println("not musicinfo object");
     	}
     	Intent intent2 = new Intent(context, SimpleMusicPlayerService.class);
         startService(intent2);
         Intent bindent = new Intent(context, SimpleMusicPlayerService.class);
-        bindent.putExtra("path", musicInfo.data);
         bindService(bindent, sc, BIND_AUTO_CREATE);
     }
     
@@ -126,32 +176,37 @@ public class PlayerActivity extends Activity {
    @Override
     protected void onDestroy() {
        handler.removeCallbacks(r);
+       if (TCPServer.pt != null)
+    	   TCPServer.pt.unRegisterHandler(controlHandler);
        unbindService(sc);
         super.onDestroy();
     }
 
     protected void updateByStatus() {
-        if (smpService == null){
+        if (MPApplication.smpService == null){
             return;
         }
-        int pos=smpService.getCurrentPosition();
+        int pos=MPApplication.smpService.getCurrentPosition();
         
-        if (smpService.getState() == STATE.IDLE){
+        if (MPApplication.smpService.getState() == STATE.IDLE){
             playButton.setText("²¥·Å");
+            stopButton.setEnabled(false);
             stateTextView.setText(getResources().getString(R.string.t_idle));
             fileView.setText("");
-        }else if (smpService.getState() == STATE.PALYING){
+        }else if (MPApplication.smpService.getState() == STATE.PALYING){
             playButton.setText("ÔÝÍ£");
+            stopButton.setEnabled(true);
             stateTextView.setText(getResources().getString(R.string.t_playing));
-        }else if (smpService.getState() == STATE.PAUSE){
+        }else if (MPApplication.smpService.getState() == STATE.PAUSE){
             playButton.setText("¼ÌÐø");
+            stopButton.setEnabled(true);
             stateTextView.setText(getResources().getString(R.string.t_pause));
-        }else{
+        }else if (MPApplication.smpService.getState() == STATE.STOP){
             playButton.setText("²¥·Å");
+            stopButton.setEnabled(false);
             stateTextView.setText(getResources().getString(R.string.t_stop));
-            
         }
-        if (smpService.getState() != STATE.IDLE){
+        if (MPApplication.smpService.getState() != STATE.IDLE){
             fileView.setText(musicInfo.name);
         }
         String s1, s2;
@@ -163,7 +218,7 @@ public class PlayerActivity extends Activity {
         timeView1.setText(s1+":"+s2);
 
         String s3, s4;
-        int pos2=smpService.getDuration();
+        int pos2=MPApplication.smpService.getDuration();
         int min2 = (pos2/1000)/60;
         int sec2 = (pos2/1000)%60;
         s3 = new DecimalFormat("00").format(min2);

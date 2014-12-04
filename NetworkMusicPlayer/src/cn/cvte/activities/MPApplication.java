@@ -6,6 +6,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 
+import cn.cvte.music.SimpleMusicPlayerService;
 import cn.cvte.network.BroadcastClient;
 import cn.cvte.network.ProcessThread;
 import cn.cvte.network.TCPClient;
@@ -13,6 +14,7 @@ import cn.cvte.network.TCPServer;
 import cn.cvte.network.UDPServer;
 
 import android.app.Application;
+import android.content.Intent;
 
 public class MPApplication extends Application{
 	/**
@@ -22,11 +24,12 @@ public class MPApplication extends Application{
 	public static boolean online = true;
 	static final int UDP_CLIENT_PORT = 9998;
 	public static DatagramSocket udpSocket;
+	public static SimpleMusicPlayerService smpService;
 	
 	public static ServerSocket serverSocket = null;
 	Socket mSocket = null;
 	public static UDPServer udpServer;
-	public static TCPClient tcpClient;
+	public static TCPServer tcpServer;
 	
 	@Override
 	public void onCreate() {
@@ -39,6 +42,7 @@ public class MPApplication extends Application{
 	public void onTerminate() {
 		online = false;
 		close();
+		stopMusicPlayerService();
 		super.onTerminate();
 	}
 	
@@ -50,7 +54,8 @@ public class MPApplication extends Application{
 			
 			serverSocket = new ServerSocket(TCPSERVER_PORT);
 			System.out.println("tcp server set up!");
-			Thread t = new Thread(new TCPServer(serverSocket));
+			tcpServer = new TCPServer(serverSocket);
+			Thread t = new Thread(tcpServer);
 			t.start();
 		} catch (Exception exception){
 			exception.printStackTrace();
@@ -73,11 +78,19 @@ public class MPApplication extends Application{
 	
 	private void close(){
 		udpSocket.close();
+		TCPClient.close();
 		try {
 			serverSocket.close();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+	
+	private void stopMusicPlayerService(){
+		/*Intent intent = new Intent(getApplicationContext(), SimpleMusicPlayerService.class);
+        stopService(intent);*/
+		smpService.stopSelf();
+		
 	}
 }

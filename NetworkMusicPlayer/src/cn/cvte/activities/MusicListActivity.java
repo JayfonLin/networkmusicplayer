@@ -19,12 +19,16 @@ import android.view.View.OnClickListener;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 
 public class MusicListActivity extends Activity{
 	
 	ListView audioList;
+	LinearLayout headerLayout;
+	Button playButton, pauseButton, stopButton, nextButton;
+	TextView state_tv, file_tv;
 	ProgressDialog dialog;
 	MusicListAdapter adapter;
 	Button btn;
@@ -55,17 +59,18 @@ public class MusicListActivity extends Activity{
 	
 	private void findViews(){
 		audioList = (ListView) findViewById(R.id.listView1);
+		headerLayout = (LinearLayout) findViewById(R.id.header_layout);
+		if (myDev){
+			headerLayout.setVisibility(View.GONE);
+		}
+		playButton = (Button) findViewById(R.id.play);
+		pauseButton = (Button) findViewById(R.id.pause);
+		stopButton = (Button) findViewById(R.id.stop);
+		nextButton = (Button) findViewById(R.id.next);
 		btn = (Button) findViewById(R.id.button2);
 		tv = (TextView) findViewById(R.id.textView1);
 		tv.setText(deviceName);
-		btn.setOnClickListener(new OnClickListener() {
-			@Override
-			public void onClick(View arg0) {
-				Intent intent = new Intent(MusicListActivity.this, SearchDevicesActivity.class);
-				startActivity(intent);
-				finish();
-			}
-		});
+		
 	}
 	
 	private void loadFile(){
@@ -85,15 +90,82 @@ public class MusicListActivity extends Activity{
 			public void onItemClick(AdapterView<?> arg0, View arg1, int arg2,
 					long arg3) {
 				MusicInfo info = (MusicInfo) audioList.getAdapter().getItem(arg2);
-				Intent intent = new Intent(MusicListActivity.this, PlayerActivity.class);
-				Bundle b = new Bundle();
-				b.putSerializable("music", info);
-				intent.putExtras(b);
+				if (myDev){
+					Intent intent = new Intent(MusicListActivity.this, PlayerActivity.class);
+					Bundle b = new Bundle();
+					b.putSerializable("music", info);
+					intent.putExtras(b);
+					startActivity(intent);
+				}else{
+					
+				}
+			}
+		});
+		btn.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View arg0) {
+				Intent intent = new Intent(MusicListActivity.this, SearchDevicesActivity.class);
 				startActivity(intent);
+				finish();
+			}
+		});
+		playButton.setOnClickListener(new OnClickListener() {
+			
+			@Override
+			public void onClick(View v) {
+				new Thread(new ControlThread("play")).start();
+			}
+		});
+		pauseButton.setOnClickListener(new OnClickListener() {
+			
+			@Override
+			public void onClick(View v) {
+				new Thread(new ControlThread("pause")).start();
+			}
+		});
+		stopButton.setOnClickListener(new OnClickListener() {
+	
+			@Override
+			public void onClick(View v) {
+				new Thread(new ControlThread("stop")).start();
+			}
+		});
+		nextButton.setOnClickListener(new OnClickListener() {
+			
+			@Override
+			public void onClick(View v) {
+				
 			}
 		});
 	}
-	
+	class ControlThread implements Runnable
+	{
+		String command;
+		public ControlThread(String cm){
+			command = cm;
+		}
+		@Override
+		public void run() {
+			TCPClient.simpleControl(command);
+		}
+		
+	}
+	class SelectMusicTask extends AsyncTask<String, Integer, Boolean>
+	{
+		
+		@Override
+		protected Boolean doInBackground(String... params) {
+			return TCPClient.selectMusic(params[0]);
+		}
+
+		@Override
+		protected void onPostExecute(Boolean result) {
+			if (result.booleanValue()){
+				//TODO
+			}
+		}
+		
+	}
 	class LoadMusicTask extends AsyncTask<Context, Integer, Void>
 	{
 		@Override
@@ -125,7 +197,7 @@ public class MusicListActivity extends Activity{
 		}
 		@Override
 		protected List<MusicInfo> doInBackground(String... arg0) {
-			return MPApplication.tcpClient.getMusicList();
+			return TCPClient.getMusicList();
 		}
 		@Override
 		protected void onPostExecute(List<MusicInfo> result) {
@@ -134,6 +206,5 @@ public class MusicListActivity extends Activity{
 			dialog.dismiss();
 			super.onPostExecute(result);
 		}
-		
 	}
 }

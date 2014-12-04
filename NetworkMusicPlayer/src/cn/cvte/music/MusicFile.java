@@ -39,7 +39,7 @@ public class MusicFile {
 		Cursor cursor = mContext.getContentResolver().query(
 				MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, str, null,
 				null, null);
-		System.out.println("count = " + cursor.getCount());  //获取总共有多少个条目
+		//System.out.println("count = " + cursor.getCount());  //获取总共有多少个条目
 		while (cursor.moveToNext()) {
 
 			Map<String, Object> map = new HashMap<String, Object>();

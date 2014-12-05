@@ -8,8 +8,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content" >
 
-      
-
         <Button
             android:id="@+id/button2"
             android:layout_width="wrap_content"
@@ -29,10 +27,20 @@
             android:text="" />
 
     </RelativeLayout>
+    
+
+    <ListView
+        android:id="@+id/listView1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" >
+    </ListView>
+    
     <LinearLayout 
 	    android:layout_width="match_parent"
 	    android:layout_height="match_parent"
 	    android:id="@+id/header_layout"
+	    android:visibility="gone"
+	    android:layout_gravity="bottom"
 	    android:orientation="vertical" >
 	
 	    <LinearLayout
@@ -90,11 +98,5 @@
 	    </LinearLayout>
 	
 	</LinearLayout>
-
-    <ListView
-        android:id="@+id/listView1"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" >
-    </ListView>
 
 </LinearLayout>

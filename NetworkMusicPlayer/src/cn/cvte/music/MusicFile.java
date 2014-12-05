@@ -21,10 +21,10 @@ public class MusicFile {
 	public MusicFile(Context context){
 		mContext = context;
 	}
-	public void load(){
+	public boolean load(){
 		if (!checkSDCard()){
-			Toast.makeText(mContext, "SD卡尚未插入", Toast.LENGTH_SHORT).show();
-			return;
+			//Toast.makeText(mContext, "SD卡尚未插入", Toast.LENGTH_SHORT).show();
+			return false;
 		}
 		musicInfoList.clear();
 		
@@ -39,10 +39,11 @@ public class MusicFile {
 		Cursor cursor = mContext.getContentResolver().query(
 				MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, str, null,
 				null, null);
-		//System.out.println("count = " + cursor.getCount());  //获取总共有多少个条目
+		System.out.println("cursor.getCount():"+cursor.getCount());
 		while (cursor.moveToNext()) {
 
 			Map<String, Object> map = new HashMap<String, Object>();
+			System.out.println("cursor.getColumnCount():"+cursor.getColumnCount());
 			for (int i = 0; i < 6; ++i){
 				if (i >= cursor.getColumnCount()){
 					map.put(str[i], UNKNOW);
@@ -54,6 +55,7 @@ public class MusicFile {
 			musicInfoList.add(mi);
 		}
 		cursor.close();
+		return true;
 	}
 	
 	public boolean checkSDCard(){

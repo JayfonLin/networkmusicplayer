@@ -28,6 +28,8 @@ public class BroadcastClient implements Runnable{
 	 * static field
 	 */
 	final static int RECEIVE_LENGTH = 1024;
+	static final int UDP_CLIENT_PORT = 9998;
+	static DatagramSocket udpSocket;
 	
 	Context mContext;
 
@@ -67,18 +69,36 @@ public class BroadcastClient implements Runnable{
 	private void broadcast(){
 		String serverAddress;
 		try {
+			setupClient();
 			serverAddress = getLocalIpAddress(mContext).toString().split("/")[1];
 			System.out.println("ip:"+serverAddress);
 			byte[] sendMsg = ("hello"+"#"+serverAddress).getBytes();
 			DatagramPacket packet;
 			packet = new DatagramPacket(sendMsg,sendMsg.length,
 					getBroadcastAddress(mContext), UDPServer.SERVER_PORT);
-			MPApplication.udpSocket.send(packet);//发送报文
+			udpSocket.send(packet);//发送报文
 			
 		} catch (UnknownHostException e1) {
 			e1.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
-		} 
+		} finally{
+			if (udpSocket != null){
+				udpSocket.close();
+				udpSocket = null;
+			}
+		}
+	}
+	
+	private void setupClient(){
+		try {
+			System.out.println("udp client setup");
+			udpSocket = new DatagramSocket(UDP_CLIENT_PORT);
+			udpSocket.setBroadcast(true);
+			//udpSocket.setSoTimeout(0);
+		} catch (SocketException e) {
+			System.out.println("Do not support broadcast");
+			e.printStackTrace();
+		}
 	}
 }

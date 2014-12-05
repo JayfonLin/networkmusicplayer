@@ -35,7 +35,7 @@ public class UDPServer implements Runnable{
 		mContext = context;
 		try {
 			socket = new DatagramSocket(SERVER_PORT);
-			socket.setSoTimeout(0);
+			//socket.setSoTimeout(0);
 			
 		} catch (IOException e) {
 			System.out.println("IOException");

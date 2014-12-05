@@ -52,10 +52,11 @@ public class ProcessThread implements Runnable{
 				if (clientSentence != null){
 					System.out.println(clientSentence);
 					if ("request_music_list".equals(clientSentence)){
+						outToClient.println("return_music_list");
 						String str = constructMusicList().toString();
 						outToClient.println(str);
 						outToClient.flush();
-					}else if ("select".equals(clientSentence)){
+					}else if ("select_music".equals(clientSentence)){
 						clientSentence = inFromClient.readLine();
 						if (mHandler != null){
 							Message msg = new Message();
@@ -129,7 +130,7 @@ public class ProcessThread implements Runnable{
 			map.put("data", mi.data);
 			
 			JSONObject jo = new JSONObject(map);
-			System.out.println("jsonobject:"+jo.toString());
+			//System.out.println("jsonobject:"+jo.toString());
 			list.add(jo);
 			
 		}

@@ -22,8 +22,7 @@ public class MPApplication extends Application{
 	 */
 	public static final int TCPSERVER_PORT = 6789;
 	public static boolean online = true;
-	static final int UDP_CLIENT_PORT = 9998;
-	public static DatagramSocket udpSocket;
+	
 	public static SimpleMusicPlayerService smpService;
 	
 	public static ServerSocket serverSocket = null;
@@ -34,7 +33,6 @@ public class MPApplication extends Application{
 	@Override
 	public void onCreate() {
 		setupServer();
-		setupClient();
 		super.onCreate();
 	}
 
@@ -49,11 +47,12 @@ public class MPApplication extends Application{
 	private void setupServer(){
 		try{
 			udpServer = new UDPServer(getApplicationContext());
+			System.out.println("udp server setup!");
 			Thread thread = new Thread(udpServer);
 			thread.start();
 			
 			serverSocket = new ServerSocket(TCPSERVER_PORT);
-			System.out.println("tcp server set up!");
+			System.out.println("tcp server setup!");
 			tcpServer = new TCPServer(serverSocket);
 			Thread t = new Thread(tcpServer);
 			t.start();
@@ -64,20 +63,9 @@ public class MPApplication extends Application{
 		}
 	}
 	
-	private void setupClient(){
-		try {
-			System.out.println("udp client setup");
-			udpSocket = new DatagramSocket(UDP_CLIENT_PORT);
-			udpSocket.setBroadcast(true);
-			udpSocket.setSoTimeout(0);
-		} catch (SocketException e) {
-			System.out.println("Do not support broadcast");
-			e.printStackTrace();
-		}
-	}
+	
 	
 	private void close(){
-		udpSocket.close();
 		TCPClient.close();
 		try {
 			serverSocket.close();

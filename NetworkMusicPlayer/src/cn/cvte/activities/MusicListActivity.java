@@ -14,6 +14,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.AdapterView;
@@ -22,6 +24,7 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class MusicListActivity extends Activity{
 	
@@ -30,10 +33,13 @@ public class MusicListActivity extends Activity{
 	Button playButton, pauseButton, stopButton, nextButton;
 	TextView state_tv, file_tv;
 	ProgressDialog dialog;
+	Handler controlHandler;
 	MusicListAdapter adapter;
 	Button btn;
 	TextView tv;
 	String deviceName;
+	int playingMusicID = -1;
+	
 	boolean myDev = true;
 	
 	@Override
@@ -43,6 +49,7 @@ public class MusicListActivity extends Activity{
 		init();
 		findViews();
 		loadFile();
+		setHandler();
 		setClick();
 	}
 	private void init(){
@@ -62,7 +69,11 @@ public class MusicListActivity extends Activity{
 		headerLayout = (LinearLayout) findViewById(R.id.header_layout);
 		if (myDev){
 			headerLayout.setVisibility(View.GONE);
+		}else{
+			headerLayout.setVisibility(View.VISIBLE);
 		}
+		state_tv = (TextView) findViewById(R.id.state);
+		file_tv = (TextView) findViewById(R.id.file);
 		playButton = (Button) findViewById(R.id.play);
 		pauseButton = (Button) findViewById(R.id.pause);
 		stopButton = (Button) findViewById(R.id.stop);
@@ -73,10 +84,41 @@ public class MusicListActivity extends Activity{
 		
 	}
 	
+	private void setHandler(){
+		controlHandler = new Handler(){
+
+			@Override
+			public void handleMessage(Message msg) {
+				switch(msg.what){
+				case 0:
+					state_tv.setText(getResources().getString(R.string.t_playing));
+					break;
+				case 1:
+					state_tv.setText(getResources().getString(R.string.t_pause));
+					break;
+				case 2:
+					state_tv.setText(getResources().getString(R.string.t_stop));
+					break;
+				case 3:
+					state_tv.setText(getResources().getString(R.string.t_playing));
+					String name = (String) msg.obj;
+					int i = name.lastIndexOf("/");
+					name = name.substring(i+1);
+					file_tv.setText(name);
+					break;
+				case -1:
+					Toast.makeText(MusicListActivity.this, "²Ù×÷Ê§°Ü£¡", Toast.LENGTH_SHORT).show();
+					break;
+				}
+			}
+			
+		};
+	}
+	
 	private void loadFile(){
 		if (myDev){
 			LoadMusicTask task = new LoadMusicTask();
-			task.execute(this);
+			task.execute(MusicListActivity.this);
 		}else{
 			GetNetworkMusic gnm = new GetNetworkMusic();
 			gnm.execute();
@@ -97,7 +139,7 @@ public class MusicListActivity extends Activity{
 					intent.putExtras(b);
 					startActivity(intent);
 				}else{
-					
+					playSpcMusic(info.data);
 				}
 			}
 		});
@@ -113,60 +155,90 @@ public class MusicListActivity extends Activity{
 			
 			@Override
 			public void onClick(View v) {
-				new Thread(new ControlThread("play")).start();
+				new Thread(new ControlThread("play", controlHandler)).start();
 			}
 		});
 		pauseButton.setOnClickListener(new OnClickListener() {
 			
 			@Override
 			public void onClick(View v) {
-				new Thread(new ControlThread("pause")).start();
+				new Thread(new ControlThread("pause", controlHandler)).start();
 			}
 		});
 		stopButton.setOnClickListener(new OnClickListener() {
 	
 			@Override
 			public void onClick(View v) {
-				new Thread(new ControlThread("stop")).start();
+				new Thread(new ControlThread("stop", controlHandler)).start();
 			}
 		});
 		nextButton.setOnClickListener(new OnClickListener() {
 			
 			@Override
 			public void onClick(View v) {
-				
+				String path;
+				playingMusicID = (playingMusicID+1)%audioList.getAdapter().getCount();
+				path = ((MusicInfo)audioList.getAdapter().getItem(playingMusicID)).data;
+				playSpcMusic(path);
 			}
 		});
+	}
+	
+	private void playSpcMusic(String path){
+		SelectMusicTask task = new SelectMusicTask(controlHandler);
+		task.execute(path);
 	}
 	class ControlThread implements Runnable
 	{
 		String command;
-		public ControlThread(String cm){
+		Handler stateHandler;
+		public ControlThread(String cm, Handler pHandler){
 			command = cm;
+			stateHandler = pHandler;
 		}
 		@Override
 		public void run() {
-			TCPClient.simpleControl(command);
+			boolean result = TCPClient.simpleControl(command);
+			if (result){
+				if ("play".equals(command))
+					stateHandler.sendEmptyMessage(0);
+				if ("pause".equals(command))
+					stateHandler.sendEmptyMessage(1);
+				if ("stop".equals(command))
+					stateHandler.sendEmptyMessage(2);
+			} else{
+				stateHandler.sendEmptyMessage(-1);
+			}
 		}
 		
 	}
 	class SelectMusicTask extends AsyncTask<String, Integer, Boolean>
 	{
-		
+		Handler mHandler;
+		String filePath;
+		public SelectMusicTask(Handler pHandler){
+			mHandler = pHandler;
+		}
 		@Override
 		protected Boolean doInBackground(String... params) {
-			return TCPClient.selectMusic(params[0]);
+			filePath = params[0];
+			return TCPClient.selectMusic(filePath);
 		}
 
 		@Override
 		protected void onPostExecute(Boolean result) {
 			if (result.booleanValue()){
-				//TODO
+				Message msg = new Message();
+				msg.what = 3;
+				msg.obj = filePath;
+				mHandler.sendMessage(msg);
+			}else{
+				mHandler.sendEmptyMessage(-1);
 			}
 		}
 		
 	}
-	class LoadMusicTask extends AsyncTask<Context, Integer, Void>
+	class LoadMusicTask extends AsyncTask<Context, Integer, Boolean>
 	{
 		@Override
 		protected void onPreExecute() {
@@ -174,15 +246,20 @@ public class MusicListActivity extends Activity{
 			super.onPreExecute();
 		}
 		@Override
-		protected Void doInBackground(Context... params) {
+		protected Boolean doInBackground(Context... params) {
 			MusicFile mf = new MusicFile(params[0]);
-			mf.load();
-			return null;
+			return mf.load();
 		}
 		@Override
-		protected void onPostExecute(Void result) {
-			adapter = new MusicListAdapter(MusicListActivity.this, MusicFile.musicInfoList);
-			audioList.setAdapter(adapter);
+		protected void onPostExecute(Boolean result) {
+			if (result.booleanValue()){
+				adapter = new MusicListAdapter(MusicListActivity.this, MusicFile.musicInfoList);
+				audioList.setAdapter(adapter);
+				
+			}else {
+				Toast.makeText(getApplicationContext(), "SD¿¨ÉÐÎ´²åÈë", Toast.LENGTH_SHORT).show();
+			}
+			
 			dialog.dismiss();
 			super.onPostExecute(result);
 		}
@@ -201,8 +278,16 @@ public class MusicListActivity extends Activity{
 		}
 		@Override
 		protected void onPostExecute(List<MusicInfo> result) {
-			adapter = new MusicListAdapter(MusicListActivity.this, result);
-			audioList.setAdapter(adapter);
+			System.out.println("result list size:"+result.size());
+			/*MusicListAdapter adapter2 = new MusicListAdapter(MusicListActivity.this, result);
+			audioList.setAdapter(adapter2);*/
+			//adapter.notifyDataSetChanged();
+			if (adapter != null){
+				adapter.setListData(result);
+			}else{
+				adapter = new MusicListAdapter(MusicListActivity.this, result);
+				audioList.setAdapter(adapter);
+			}
 			dialog.dismiss();
 			super.onPostExecute(result);
 		}

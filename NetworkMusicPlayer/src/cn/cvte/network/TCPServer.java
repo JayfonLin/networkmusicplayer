@@ -17,12 +17,13 @@ public class TCPServer implements Runnable{
 	public void run() {
 		try {
 			while(MPApplication.online){
-				mSocket = serverSocket.accept();
+				Socket s = serverSocket.accept();
 				System.out.println("accept");
 				if (mSocket != null){
 					mSocket.close();
 					mSocket = null;
 				}
+				mSocket = s;
 				pt = new ProcessThread(mSocket);
 	            Thread thread2 = new Thread(pt);   
 	            thread2.start();
@@ -32,8 +33,10 @@ public class TCPServer implements Runnable{
 			e.printStackTrace();
 		} finally{
 			try {
-				mSocket.close();
-				serverSocket.close();
+				if (mSocket != null)
+					mSocket.close();
+				if (serverSocket != null)
+					serverSocket.close();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}

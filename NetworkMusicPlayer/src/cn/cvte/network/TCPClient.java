@@ -55,6 +55,7 @@ public class TCPClient{
 			System.out.println("command: "+command);
 			if ("return_music_list".equals(command)){
 				String jsonStr = inFromServer.readLine();
+				System.out.println("return json:"+jsonStr);
 				JSONArray ja;
 				try {
 					ja = new JSONArray(jsonStr);
@@ -66,6 +67,7 @@ public class TCPClient{
 						mi.data = jo.getString("data");
 						mi.duration = jo.getString("duration");
 						mi.name = jo.getString("name");
+						System.out.println("mi.name:"+mi.name);
 						mi.size = jo.getString("size");
 						list.add(mi);
 					}
@@ -77,6 +79,7 @@ public class TCPClient{
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		System.out.println("json list size:"+list.size());
 		return list;
 	}
 	

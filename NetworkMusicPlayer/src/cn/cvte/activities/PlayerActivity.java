@@ -123,10 +123,9 @@ public class PlayerActivity extends Activity {
     	MPApplication.smpService.playOrPause(path);
     	if (path != null){
     		int i = path.lastIndexOf("/");
-    		if (i != -1){
-    			path = path.substring(i+1);
-    			fileView.setText(path);
-    		}
+    		
+			path = path.substring(i+1);
+			fileView.setText(path);
     	}
         updateByStatus();
     }

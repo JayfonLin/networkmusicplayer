@@ -23,6 +23,10 @@ public class MusicListAdapter extends BaseAdapter{
 		musicInfoList = list;
 		mInflater = LayoutInflater.from(context);
 	}
+	public void setListData(List<MusicInfo> list){
+		musicInfoList = list;
+		notifyDataSetChanged();
+	}
 	@Override
 	public int getCount() {
 		return musicInfoList.size();

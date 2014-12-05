@@ -41,22 +41,6 @@ public class PlayerActivity extends Activity {
     String preFile = "";
     public MusicInfo musicInfo;
     Context context = this;
-    ServiceConnection sc = new ServiceConnection() {
-        
-        public void onServiceDisconnected(ComponentName name) {
-            MPApplication.smpService = null;
-        }
-        
-        public void onServiceConnected(ComponentName name, IBinder service) {
-        	MPApplication.smpService = ((SimpleMusicPlayerService.SMPlayerBinder)service).getService();
-            System.out.println("onServiceConnected");
-            if (musicInfo != null){
-            	MPApplication.smpService.playOrPause(musicInfo.data);
-            }
-            
-        	updateByStatus();
-        }
-    };
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -123,7 +107,6 @@ public class PlayerActivity extends Activity {
     	MPApplication.smpService.playOrPause(path);
     	if (path != null){
     		int i = path.lastIndexOf("/");
-    		
 			path = path.substring(i+1);
 			fileView.setText(path);
     	}
@@ -164,11 +147,10 @@ public class PlayerActivity extends Activity {
     	Intent intent = getIntent();
     	if (intent.getSerializableExtra("music") instanceof MusicInfo){
     		musicInfo = (MusicInfo) intent.getSerializableExtra("music");
+    		if (musicInfo != null){
+    			playOrPause(musicInfo.data);
+    		}
     	}
-    	Intent intent2 = new Intent(context, SimpleMusicPlayerService.class);
-        startService(intent2);
-        Intent bindent = new Intent(context, SimpleMusicPlayerService.class);
-        bindService(bindent, sc, BIND_AUTO_CREATE);
     }
     
 
@@ -177,7 +159,7 @@ public class PlayerActivity extends Activity {
        handler.removeCallbacks(r);
        if (TCPServer.pt != null)
     	   TCPServer.pt.unRegisterHandler(controlHandler);
-       unbindService(sc);
+       
         super.onDestroy();
     }
 
@@ -205,9 +187,9 @@ public class PlayerActivity extends Activity {
             stopButton.setEnabled(false);
             stateTextView.setText(getResources().getString(R.string.t_stop));
         }
-        if (MPApplication.smpService.getState() != STATE.IDLE){
+        /*if (MPApplication.smpService.getState() != STATE.IDLE){
             fileView.setText(musicInfo.name);
-        }
+        }*/
         String s1, s2;
         
         int min = (pos/1000)/60;

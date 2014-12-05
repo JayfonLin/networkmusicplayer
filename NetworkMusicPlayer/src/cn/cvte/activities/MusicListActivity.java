@@ -6,16 +6,21 @@ import java.util.List;
 import cn.cvte.music.MusicFile;
 import cn.cvte.music.MusicInfo;
 import cn.cvte.music.MusicListAdapter;
+import cn.cvte.music.SimpleMusicPlayerService;
 import cn.cvte.network.TCPClient;
 import cn.cvte.networkmusicplayer.R;
 import android.app.Activity;
 import android.app.ProgressDialog;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.Message;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.AdapterView;
@@ -29,7 +34,6 @@ import android.widget.Toast;
 public class MusicListActivity extends Activity{
 	
 	ListView audioList;
-	LinearLayout headerLayout;
 	Button playButton, pauseButton, stopButton, nextButton;
 	TextView state_tv, file_tv;
 	ProgressDialog dialog;
@@ -39,19 +43,45 @@ public class MusicListActivity extends Activity{
 	TextView tv;
 	String deviceName;
 	int playingMusicID = -1;
-	
+	Context context = this;
 	boolean myDev = true;
-	
+	ServiceConnection sc = new ServiceConnection() {
+        
+        public void onServiceDisconnected(ComponentName name) {
+            MPApplication.smpService = null;
+        }
+        
+        public void onServiceConnected(ComponentName name, IBinder service) {
+        	MPApplication.smpService = ((SimpleMusicPlayerService.SMPlayerBinder)service).getService();
+            System.out.println("onServiceConnected");
+        }
+    };
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.music_list);
+		processIntent();
 		init();
 		findViews();
 		loadFile();
 		setHandler();
 		setClick();
 	}
+	
+	@Override
+	protected void onDestroy() {
+		unbindService(sc);
+		super.onDestroy();
+	}
+
+
+	private void processIntent(){
+    	Intent intent2 = new Intent(getApplicationContext(), SimpleMusicPlayerService.class);
+        startService(intent2);
+        Intent bindent = new Intent(getApplicationContext(), SimpleMusicPlayerService.class);
+        bindService(bindent, sc, BIND_AUTO_CREATE);
+    }
+	
 	private void init(){
 		Intent intent = getIntent();
 		
@@ -66,12 +96,7 @@ public class MusicListActivity extends Activity{
 	
 	private void findViews(){
 		audioList = (ListView) findViewById(R.id.listView1);
-		headerLayout = (LinearLayout) findViewById(R.id.header_layout);
-		if (myDev){
-			headerLayout.setVisibility(View.GONE);
-		}else{
-			headerLayout.setVisibility(View.VISIBLE);
-		}
+
 		state_tv = (TextView) findViewById(R.id.state);
 		file_tv = (TextView) findViewById(R.id.file);
 		playButton = (Button) findViewById(R.id.play);
@@ -81,7 +106,6 @@ public class MusicListActivity extends Activity{
 		btn = (Button) findViewById(R.id.button2);
 		tv = (TextView) findViewById(R.id.textView1);
 		tv.setText(deviceName);
-		
 	}
 	
 	private void setHandler(){

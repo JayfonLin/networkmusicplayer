@@ -58,6 +58,7 @@ public class ProcessThread implements Runnable{
 						outToClient.flush();
 					}else if ("select_music".equals(clientSentence)){
 						clientSentence = inFromClient.readLine();
+						System.out.println("will play "+clientSentence);
 						if (mHandler != null){
 							Message msg = new Message();
 							msg.what = 0;
@@ -67,6 +68,7 @@ public class ProcessThread implements Runnable{
 							MPApplication.smpService.playOrPause(clientSentence);
 						}
 						outToClient.println("success");
+						outToClient.flush();
 					}else if ("pause".equals(clientSentence)){
 						if (MPApplication.smpService.getState() == STATE.PALYING){
 							if (mHandler != null){
@@ -76,6 +78,7 @@ public class ProcessThread implements Runnable{
 							}
 						}
 						outToClient.println("success");
+						outToClient.flush();
 					}else if ("stop".equals(clientSentence)){
 						if (MPApplication.smpService.getState() != STATE.STOP){
 							if (mHandler != null){
@@ -85,6 +88,7 @@ public class ProcessThread implements Runnable{
 							}
 						}
 						outToClient.println("success");
+						outToClient.flush();
 					}else if ("play".equals(clientSentence)){
 						if (MPApplication.smpService.getState() != STATE.PALYING){
 							if (mHandler != null){
@@ -95,6 +99,7 @@ public class ProcessThread implements Runnable{
 						}
 						
 						outToClient.println("success");
+						outToClient.flush();
 					}
 				}
 			} catch (IOException e) {

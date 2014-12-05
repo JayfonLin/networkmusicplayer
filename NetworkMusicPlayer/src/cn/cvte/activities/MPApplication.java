@@ -14,7 +14,10 @@ import cn.cvte.network.TCPServer;
 import cn.cvte.network.UDPServer;
 
 import android.app.Application;
+import android.content.ComponentName;
 import android.content.Intent;
+import android.content.ServiceConnection;
+import android.os.IBinder;
 
 public class MPApplication extends Application{
 	/**
@@ -22,7 +25,6 @@ public class MPApplication extends Application{
 	 */
 	public static final int TCPSERVER_PORT = 6789;
 	public static boolean online = true;
-	
 	public static SimpleMusicPlayerService smpService;
 	
 	public static ServerSocket serverSocket = null;
@@ -63,21 +65,16 @@ public class MPApplication extends Application{
 		}
 	}
 	
-	
-	
 	private void close(){
 		TCPClient.close();
 		try {
 			serverSocket.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 	
 	private void stopMusicPlayerService(){
-		/*Intent intent = new Intent(getApplicationContext(), SimpleMusicPlayerService.class);
-        stopService(intent);*/
 		smpService.stopSelf();
 		
 	}

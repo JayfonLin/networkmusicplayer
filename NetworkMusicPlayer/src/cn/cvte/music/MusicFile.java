@@ -43,7 +43,7 @@ public class MusicFile {
 		while (cursor.moveToNext()) {
 
 			Map<String, Object> map = new HashMap<String, Object>();
-			System.out.println("cursor.getColumnCount():"+cursor.getColumnCount());
+			//System.out.println("cursor.getColumnCount():"+cursor.getColumnCount());
 			for (int i = 0; i < 6; ++i){
 				if (i >= cursor.getColumnCount()){
 					map.put(str[i], UNKNOW);

@@ -59,15 +59,15 @@ public class UDPServer implements Runnable{
 				socket.receive(dp);
 				String msg = new String(dp.getData()).trim();
 				System.out.println(msg);
-				String command = msg.split("#")[0];
-				String address = msg.split("#")[1];
+				String command = msg;
+				String address = dp.getAddress().toString().split("/")[1];
 				if ("hello".equals(command)){
 					DatagramPacket packet;
 					String serverAddress;
 					serverAddress = BroadcastClient.getLocalIpAddress(mContext).toString().split("/")[1];
-					System.out.println("ip:"+serverAddress);
+					//System.out.println("ip:"+serverAddress);
 					if (!address.equals(serverAddress)){
-						byte[] sendMsg = ("welcome"+"#"+serverAddress).getBytes();
+						byte[] sendMsg = "welcome".getBytes();
 						packet = new DatagramPacket(sendMsg,sendMsg.length,
 								InetAddress.getByName(address), SERVER_PORT);
 						socket.send(packet);

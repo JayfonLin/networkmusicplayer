@@ -7,6 +7,7 @@
     <string name="t_idle">未加载任何文件</string>
     <string name="s_play">播放</string>
     <string name="s_pause">暂停</string>
+    <string name="s_continue">继续</string>
     <string name="s_stop">停止</string>
     <string name="s_next">下一曲</string>
     <string name="t_loaded">已加载</string>

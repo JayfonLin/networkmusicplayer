@@ -67,12 +67,12 @@ public class BroadcastClient implements Runnable{
 	}
 	
 	private void broadcast(){
-		String serverAddress;
+		//String serverAddress;
 		try {
 			setupClient();
-			serverAddress = getLocalIpAddress(mContext).toString().split("/")[1];
-			System.out.println("ip:"+serverAddress);
-			byte[] sendMsg = ("hello"+"#"+serverAddress).getBytes();
+			//serverAddress = getLocalIpAddress(mContext).toString().split("/")[1];
+			//System.out.println("ip:"+serverAddress);
+			byte[] sendMsg = "hello".getBytes();
 			DatagramPacket packet;
 			packet = new DatagramPacket(sendMsg,sendMsg.length,
 					getBroadcastAddress(mContext), UDPServer.SERVER_PORT);

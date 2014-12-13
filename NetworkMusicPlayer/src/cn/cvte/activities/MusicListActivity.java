@@ -1,12 +1,14 @@
 package cn.cvte.activities;
 
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.List;
 
 import cn.cvte.music.MusicFile;
 import cn.cvte.music.MusicInfo;
 import cn.cvte.music.MusicListAdapter;
 import cn.cvte.music.SimpleMusicPlayerService;
+import cn.cvte.music.SimpleMusicPlayerService.STATE;
 import cn.cvte.network.TCPClient;
 import cn.cvte.networkmusicplayer.R;
 import android.app.Activity;
@@ -34,6 +36,7 @@ import android.widget.Toast;
 public class MusicListActivity extends Activity{
 	
 	ListView audioList;
+	LinearLayout controlLayout;
 	Button playButton, pauseButton, stopButton, nextButton;
 	TextView state_tv, file_tv;
 	ProgressDialog dialog;
@@ -71,6 +74,8 @@ public class MusicListActivity extends Activity{
 	@Override
 	protected void onDestroy() {
 		unbindService(sc);
+		if (TCPClient.getInstance() != null)
+			TCPClient.getInstance().removeHandler(controlHandler);
 		super.onDestroy();
 	}
 
@@ -96,7 +101,14 @@ public class MusicListActivity extends Activity{
 	
 	private void findViews(){
 		audioList = (ListView) findViewById(R.id.listView1);
-
+		controlLayout = (LinearLayout) findViewById(R.id.header_layout);
+		if (myDev){
+			controlLayout.setVisibility(View.GONE);
+			
+		}else{
+			controlLayout.setVisibility(View.VISIBLE);
+		}
+		
 		state_tv = (TextView) findViewById(R.id.state);
 		file_tv = (TextView) findViewById(R.id.file);
 		playButton = (Button) findViewById(R.id.play);
@@ -106,6 +118,7 @@ public class MusicListActivity extends Activity{
 		btn = (Button) findViewById(R.id.button2);
 		tv = (TextView) findViewById(R.id.textView1);
 		tv.setText(deviceName);
+		
 	}
 	
 	private void setHandler(){
@@ -115,20 +128,42 @@ public class MusicListActivity extends Activity{
 			public void handleMessage(Message msg) {
 				switch(msg.what){
 				case 0:
-					state_tv.setText(getResources().getString(R.string.t_playing));
+					if (simpleResult(msg))
+						state_tv.setText(getResources().getString(R.string.t_playing));
+					else failop();
 					break;
 				case 1:
-					state_tv.setText(getResources().getString(R.string.t_pause));
+					if (simpleResult(msg))
+						state_tv.setText(getResources().getString(R.string.t_pause));
+					else failop();
 					break;
 				case 2:
-					state_tv.setText(getResources().getString(R.string.t_stop));
+					if (simpleResult(msg))
+						state_tv.setText(getResources().getString(R.string.t_stop));
+					else failop();
 					break;
 				case 3:
-					state_tv.setText(getResources().getString(R.string.t_playing));
-					String name = (String) msg.obj;
-					int i = name.lastIndexOf("/");
-					name = name.substring(i+1);
-					file_tv.setText(name);
+					if (simpleResult(msg)){
+						state_tv.setText(getResources().getString(R.string.t_playing));
+						String name = msg.getData().getString("path");
+						int i = name.lastIndexOf("/");
+						name = name.substring(i+1);
+						file_tv.setText(name);
+					}else failop();
+					break;
+				case 4:
+					Bundle b = msg.getData();
+					ArrayList<MusicInfo> list = b.getParcelableArrayList("musicList");
+					MPApplication.smpService.setMusicList(list);
+					if (adapter != null){
+						adapter.setListData(list);
+					}else{
+						adapter = new MusicListAdapter(MusicListActivity.this, list);
+						audioList.setAdapter(adapter);
+					}
+					break;
+				case 5:
+					setState(msg);
 					break;
 				case -1:
 					Toast.makeText(MusicListActivity.this, "²Ù×÷Ê§°Ü£¡", Toast.LENGTH_SHORT).show();
@@ -137,6 +172,43 @@ public class MusicListActivity extends Activity{
 			}
 			
 		};
+		if (TCPClient.getInstance() != null)
+			TCPClient.getInstance().setHandler(controlHandler);
+	}
+
+	private void setState(Message msg){
+		Bundle b2 = msg.getData();
+		String result = (String) msg.obj;
+		if ("success".equals(result)){
+			String path = b2.getString("path");
+			String stateStr = b2.getString("state");
+			STATE state = STATE.stringToState(stateStr);
+			switch(state){
+			case IDLE:
+				state_tv.setText(getResources().getString(R.string.t_idle));
+				break;
+			case PALYING:
+				state_tv.setText(getResources().getString(R.string.t_playing));
+				break;
+			case PAUSE:
+				state_tv.setText(getResources().getString(R.string.t_pause));
+				break;
+			case STOP:
+				state_tv.setText(getResources().getString(R.string.t_stop));
+				break;
+			}
+			
+			int i = path.lastIndexOf("/");
+			String name = path.substring(i+1);
+			file_tv.setText(name);
+		}
+	}
+	private boolean simpleResult(Message msg){
+		String str = (String) msg.obj;
+		return "success".equals(str);
+	}
+	private void failop(){
+		Toast.makeText(MusicListActivity.this, "²Ù×÷Ê§°Ü£¡", Toast.LENGTH_SHORT).show();
 	}
 	
 	private void loadFile(){
@@ -144,8 +216,8 @@ public class MusicListActivity extends Activity{
 			LoadMusicTask task = new LoadMusicTask();
 			task.execute(MusicListActivity.this);
 		}else{
-			GetNetworkMusic gnm = new GetNetworkMusic();
-			gnm.execute();
+			TCPClient.getInstance().getMusicList();
+			TCPClient.getInstance().getState();
 		}
 	}
 	
@@ -159,7 +231,7 @@ public class MusicListActivity extends Activity{
 				if (myDev){
 					Intent intent = new Intent(MusicListActivity.this, PlayerActivity.class);
 					Bundle b = new Bundle();
-					b.putSerializable("music", info);
+					b.putParcelable("music", info);
 					intent.putExtras(b);
 					startActivity(intent);
 				}else{
@@ -179,21 +251,21 @@ public class MusicListActivity extends Activity{
 			
 			@Override
 			public void onClick(View v) {
-				new Thread(new ControlThread("play", controlHandler)).start();
+				TCPClient.getInstance().write("play\n");
 			}
 		});
 		pauseButton.setOnClickListener(new OnClickListener() {
 			
 			@Override
 			public void onClick(View v) {
-				new Thread(new ControlThread("pause", controlHandler)).start();
+				TCPClient.getInstance().write("pause\n");
 			}
 		});
 		stopButton.setOnClickListener(new OnClickListener() {
 	
 			@Override
 			public void onClick(View v) {
-				new Thread(new ControlThread("stop", controlHandler)).start();
+				TCPClient.getInstance().write("stop\n");
 			}
 		});
 		nextButton.setOnClickListener(new OnClickListener() {
@@ -209,59 +281,9 @@ public class MusicListActivity extends Activity{
 	}
 	
 	private void playSpcMusic(String path){
-		SelectMusicTask task = new SelectMusicTask(controlHandler);
-		task.execute(path);
+		TCPClient.getInstance().selectMusic(path);
 	}
-	class ControlThread implements Runnable
-	{
-		String command;
-		Handler stateHandler;
-		public ControlThread(String cm, Handler pHandler){
-			command = cm;
-			stateHandler = pHandler;
-		}
-		@Override
-		public void run() {
-			boolean result = TCPClient.simpleControl(command);
-			if (result){
-				if ("play".equals(command))
-					stateHandler.sendEmptyMessage(0);
-				if ("pause".equals(command))
-					stateHandler.sendEmptyMessage(1);
-				if ("stop".equals(command))
-					stateHandler.sendEmptyMessage(2);
-			} else{
-				stateHandler.sendEmptyMessage(-1);
-			}
-		}
-		
-	}
-	class SelectMusicTask extends AsyncTask<String, Integer, Boolean>
-	{
-		Handler mHandler;
-		String filePath;
-		public SelectMusicTask(Handler pHandler){
-			mHandler = pHandler;
-		}
-		@Override
-		protected Boolean doInBackground(String... params) {
-			filePath = params[0];
-			return TCPClient.selectMusic(filePath);
-		}
-
-		@Override
-		protected void onPostExecute(Boolean result) {
-			if (result.booleanValue()){
-				Message msg = new Message();
-				msg.what = 3;
-				msg.obj = filePath;
-				mHandler.sendMessage(msg);
-			}else{
-				mHandler.sendEmptyMessage(-1);
-			}
-		}
-		
-	}
+	
 	class LoadMusicTask extends AsyncTask<Context, Integer, Boolean>
 	{
 		@Override
@@ -279,7 +301,7 @@ public class MusicListActivity extends Activity{
 			if (result.booleanValue()){
 				adapter = new MusicListAdapter(MusicListActivity.this, MusicFile.musicInfoList);
 				audioList.setAdapter(adapter);
-				
+				MPApplication.smpService.setMusicList(MusicFile.musicInfoList);
 			}else {
 				Toast.makeText(getApplicationContext(), "SD¿¨ÉÐÎ´²åÈë", Toast.LENGTH_SHORT).show();
 			}
@@ -288,32 +310,5 @@ public class MusicListActivity extends Activity{
 			super.onPostExecute(result);
 		}
 	}
-	
-	class GetNetworkMusic extends AsyncTask<String, Integer, List<MusicInfo>>
-	{
-		@Override
-		protected void onPreExecute() {
-			dialog.show();
-			super.onPreExecute();
-		}
-		@Override
-		protected List<MusicInfo> doInBackground(String... arg0) {
-			return TCPClient.getMusicList();
-		}
-		@Override
-		protected void onPostExecute(List<MusicInfo> result) {
-			System.out.println("result list size:"+result.size());
-			/*MusicListAdapter adapter2 = new MusicListAdapter(MusicListActivity.this, result);
-			audioList.setAdapter(adapter2);*/
-			//adapter.notifyDataSetChanged();
-			if (adapter != null){
-				adapter.setListData(result);
-			}else{
-				adapter = new MusicListAdapter(MusicListActivity.this, result);
-				audioList.setAdapter(adapter);
-			}
-			dialog.dismiss();
-			super.onPostExecute(result);
-		}
-	}
+
 }

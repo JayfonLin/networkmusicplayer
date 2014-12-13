@@ -2,11 +2,15 @@ package cn.cvte.network;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
+import java.io.WriteAbortedException;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -16,6 +20,8 @@ import java.util.List;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import android.os.Handler;
 
 import cn.cvte.activities.MPApplication;
 import cn.cvte.activities.SearchDevicesActivity;
@@ -29,8 +35,23 @@ public class TCPClient{
 	static PrintWriter outToServer;
 	static BufferedReader inFromServer;
 	static ObjectInputStream oi;
+	static TCPReaderThread readThread;
+	private static TCPClient instance;
 	
-	public TCPClient(String address){
+	public static TCPClient getInstance(){
+		return instance;
+	}
+	public static TCPClient getInstance(String address){
+		if (instance == null){
+			synchronized (TCPClient.class) {
+				if (instance == null)
+					instance = new TCPClient(address);
+			}
+		}
+		return instance;
+	}
+	
+	private TCPClient(String address){
 		try {
 			close();
 			clientSocket = new Socket(InetAddress.getByName(address),
@@ -38,88 +59,107 @@ public class TCPClient{
 			outToServer = new PrintWriter(clientSocket.getOutputStream());
 			inFromServer = new BufferedReader(
 					new InputStreamReader(clientSocket.getInputStream()));
+			if (readThread != null){
+				readThread.interrupt();
+				readThread = null;
+			}
+			readThread = new TCPReaderThread(inFromServer, outToServer);
+			readThread.start();
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
 	}
 	
-	public static List<MusicInfo> getMusicList(){
-		List<MusicInfo> list = new ArrayList<MusicInfo>();
-		try {
-			outToServer.println("request_music_list");
-			outToServer.flush();
-			String command = inFromServer.readLine();
-			System.out.println("command: "+command);
-			if ("return_music_list".equals(command)){
-				String jsonStr = inFromServer.readLine();
-				System.out.println("return json:"+jsonStr);
-				JSONArray ja;
-				try {
-					ja = new JSONArray(jsonStr);
-					for (int i = 0; i < ja.length(); ++i){
-						JSONObject jo = ja.getJSONObject(i);
-						MusicInfo mi = new MusicInfo();
-						mi.id = jo.getString("id");
-						mi.artist = jo.getString("artist");
-						mi.data = jo.getString("data");
-						mi.duration = jo.getString("duration");
-						mi.name = jo.getString("name");
-						System.out.println("mi.name:"+mi.name);
-						mi.size = jo.getString("size");
-						list.add(mi);
+	public void write(final String str){
+		if (outToServer != null){
+			synchronized (outToServer) {
+				Thread t = new Thread(new Runnable() {
+					
+					@Override
+					public void run() {
+						outToServer.print(str);
+						outToServer.flush();
 					}
-				} catch (JSONException e) {
-					e.printStackTrace();
+				});
+				t.start();
+			}
+		}
+	}
+	
+	public void transportFile(String filePath){
+		write("transport_file\n");
+		File file = new File(filePath);
+		BufferedReader reader = null;
+		try {
+			reader = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
+			int bufferSize = 1024;
+			char[] bufArray = new char[bufferSize];
+			write(file.getName()+"\n");
+			write(file.length()+"\n");
+			
+			while (true){
+				int read = 0;
+				if (reader != null){
+					read = reader.read(bufArray);
+				}
+				if (read == -1) break;
+				synchronized (outToServer) {
+					outToServer.write(bufArray,0,read);
 				}
 			}
+			outToServer.flush();
 			
-		} catch (IOException e) {
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
-		System.out.println("json list size:"+list.size());
-		return list;
-	}
-	
-	public static boolean selectMusic(String path){
-		if (outToServer != null && inFromServer != null){
-			outToServer.println("select_music");
-			outToServer.println(path);
-			outToServer.flush();
-			return judgeState();
-		}
-		return false;
-	}
-	
-	
-	
-	public static boolean simpleControl(String cm){
-		if (outToServer != null && inFromServer != null){
-			outToServer.println(cm);
-			outToServer.flush();
-			return judgeState();
-		}
-		return false;
-	}
-	
-	private static boolean judgeState(){
-		String command;
-		try {
-			command = inFromServer.readLine();
-			System.out.println("command: "+command);
-			if ("success".equals(command)){
-				return true;
-			}else
-				return false;
 		} catch (IOException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
+		} finally{
+			try{
+				if (reader != null)
+					reader.close();
+			}catch(IOException e){
+				e.printStackTrace();
+			}
 		}
-		return false;
 	}
 	
-	public static void close(){
+	public void setHandler(Handler pHandler){
+		if (readThread != null)
+			readThread.setHandler(pHandler);
+	}
+	public void removeHandler(Handler pHandler){
+		if (readThread != null)
+			readThread.removeHandler(pHandler);
+	}
+	
+	public void getMusicList(){
+		write("request_music_list\n");
+	}
+	public void getState(){
+		write("request_state\n");
+	}
+	
+	public void selectMusic(String path){
+		if (outToServer != null){
+			StringBuilder outStr = new StringBuilder("select_music\n");
+			outStr.append(path);
+			outStr.append("\n");
+			write(outStr.toString());
+		}
+	}
+	
+	public void simpleControl(String cm){
+		if (outToServer != null){
+			write(cm+"\n");
+		}
+	}
+	
+	
+	public void close(){
 		try {
 			if (outToServer != null){
 				outToServer.close();

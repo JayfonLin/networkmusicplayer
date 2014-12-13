@@ -41,7 +41,6 @@ public class ProcessThread implements Runnable{
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
 	}
 	
 	@Override
@@ -51,55 +50,22 @@ public class ProcessThread implements Runnable{
 				clientSentence = inFromClient.readLine();
 				if (clientSentence != null){
 					System.out.println(clientSentence);
+					
 					if ("request_music_list".equals(clientSentence)){
-						outToClient.println("return_music_list");
-						String str = constructMusicList().toString();
-						outToClient.println(str);
-						outToClient.flush();
+						requestMusicList();
 					}else if ("select_music".equals(clientSentence)){
 						clientSentence = inFromClient.readLine();
 						System.out.println("will play "+clientSentence);
-						if (mHandler != null){
-							Message msg = new Message();
-							msg.what = 0;
-							msg.obj = clientSentence;
-							mHandler.sendMessage(msg);
-						}else{
-							MPApplication.smpService.playOrPause(clientSentence);
-						}
-						outToClient.println("success");
-						outToClient.flush();
+						selectMusic(clientSentence);
 					}else if ("pause".equals(clientSentence)){
-						if (MPApplication.smpService.getState() == STATE.PALYING){
-							if (mHandler != null){
-								mHandler.sendEmptyMessage(1);
-							}else{
-								MPApplication.smpService.playOrPause(null);
-							}
-						}
-						outToClient.println("success");
-						outToClient.flush();
+						pause();
 					}else if ("stop".equals(clientSentence)){
-						if (MPApplication.smpService.getState() != STATE.STOP){
-							if (mHandler != null){
-								mHandler.sendEmptyMessage(2);
-							}else{
-								MPApplication.smpService.stop();
-							}
-						}
-						outToClient.println("success");
-						outToClient.flush();
+						stop();
 					}else if ("play".equals(clientSentence)){
-						if (MPApplication.smpService.getState() != STATE.PALYING){
-							if (mHandler != null){
-								mHandler.sendEmptyMessage(1);
-							}else{
-								MPApplication.smpService.playOrPause(null);
-							}
-						}
+						play();
+					}else if ("request_state".equals(clientSentence)){
 						
-						outToClient.println("success");
-						outToClient.flush();
+						blockWrite(getState());
 					}
 				}
 			} catch (IOException e) {
@@ -112,6 +78,102 @@ public class ProcessThread implements Runnable{
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		}
+	}
+	public String getState(){
+		STATE state = MPApplication.smpService.getState();
+		StringBuilder sb = new StringBuilder("return_state_result\n");
+		sb.append("success\n");
+		sb.append(MPApplication.smpService.getCurPath());
+		sb.append("\n");
+		sb.append(state);
+		sb.append("\n");
+		return sb.toString();
+	}
+	private void stop(){
+		if (MPApplication.smpService.getState() != STATE.STOP){
+			if (mHandler != null){
+				mHandler.sendEmptyMessage(2);
+			}else{
+				MPApplication.smpService.stop();
+			}
+		}
+		StringBuilder sb = new StringBuilder("stop_result\n");
+		sb.append("success\n");
+		blockWrite(sb.toString());
+	}
+	private void play(){
+		if (MPApplication.smpService.getState() != STATE.PALYING){
+			if (mHandler != null){
+				mHandler.sendEmptyMessage(1);
+			}else{
+				MPApplication.smpService.playOrPause(null);
+			}
+		}
+		StringBuilder sb = new StringBuilder("play_result\n");
+		sb.append("success\n");
+		blockWrite(sb.toString());
+	}
+	private void requestMusicList(){
+		StringBuilder returnStr = new StringBuilder();
+		returnStr.append("return_music_list\n");
+		returnStr.append(constructMusicList().toString());
+		returnStr.append("\n");
+		blockWrite(returnStr.toString());
+	}
+	private void selectMusic(String path){
+		StringBuilder returnStr = new StringBuilder();
+		if (mHandler != null){
+			Message msg = new Message();
+			msg.what = 0;
+			msg.obj = path;
+			mHandler.sendMessage(msg);
+		}else{
+			MPApplication.smpService.playOrPause(path);
+		}
+		returnStr.append("select_music_result\n");
+		
+		returnStr.append("success\n");
+		returnStr.append(path);
+		returnStr.append("\n");
+		blockWrite(returnStr.toString());
+	}
+	
+	private void pause(){
+		if (MPApplication.smpService.getState() == STATE.PALYING){
+			if (mHandler != null){
+				mHandler.sendEmptyMessage(1);
+			}else{
+				MPApplication.smpService.playOrPause(null);
+			}
+		}
+		StringBuilder sb = new StringBuilder("pause_result\n");
+		sb.append("success\n");
+		blockWrite(sb.toString());
+	}
+	
+	private void blockWrite(String str){
+		if (outToClient != null){
+			synchronized (outToClient) {
+				outToClient.print(str);
+				outToClient.flush();
+			}
+		}
+	}
+	
+	public void unblockWrite(final String str){
+		if (outToClient != null){
+			synchronized (outToClient) {
+				Thread t = new Thread(new Runnable() {
+					
+					@Override
+					public void run() {
+						outToClient.print(str);
+						outToClient.flush();
+					}
+				});
+				t.start();
+			}
 		}
 	}
 	
@@ -135,12 +197,10 @@ public class ProcessThread implements Runnable{
 			map.put("data", mi.data);
 			
 			JSONObject jo = new JSONObject(map);
-			//System.out.println("jsonobject:"+jo.toString());
 			list.add(jo);
 			
 		}
 		JSONArray ja = new JSONArray(list);
-		System.out.println("jsonarray:"+ja.toString());
 		return ja;
 	}
 

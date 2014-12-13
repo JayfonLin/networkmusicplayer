@@ -147,7 +147,7 @@ public class SearchDevicesActivity extends Activity {
 
 		@Override
 		protected String doInBackground(String... arg0) {
-			new TCPClient(arg0[0]);
+			TCPClient.getInstance(arg0[0]);
 			return arg0[0];
 			
 		}

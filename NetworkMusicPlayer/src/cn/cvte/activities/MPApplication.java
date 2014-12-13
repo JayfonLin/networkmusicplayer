@@ -66,7 +66,7 @@ public class MPApplication extends Application{
 	}
 	
 	private void close(){
-		TCPClient.close();
+		TCPClient.getInstance().close();
 		try {
 			serverSocket.close();
 		} catch (IOException e) {

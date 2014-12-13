@@ -2,6 +2,7 @@ package cn.cvte.activities;
 
 import java.text.DecimalFormat;
 
+import cn.cvte.music.MPObserver;
 import cn.cvte.music.MusicInfo;
 import cn.cvte.music.SimpleMusicPlayerService;
 import cn.cvte.music.SimpleMusicPlayerService.STATE;
@@ -28,9 +29,9 @@ import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TextView;
  
-public class PlayerActivity extends Activity {
+public class PlayerActivity extends Activity implements MPObserver{
 	
-    Handler handler = new Handler();
+    
     Handler controlHandler;
     
     Button playButton, stopButton;
@@ -48,9 +49,8 @@ public class PlayerActivity extends Activity {
         setContentView(R.layout.player_layout);
         findViews();
         setClicks();
-        
         processIntent();
-        handler.post(r);
+        MPApplication.smpService.registerObserver(this);
     }
     
     private void findViews(){
@@ -106,16 +106,12 @@ public class PlayerActivity extends Activity {
     private void playOrPause(String path){
     	MPApplication.smpService.playOrPause(path);
     	if (path != null){
-    		int i = path.lastIndexOf("/");
-			path = path.substring(i+1);
-			fileView.setText(path);
+    		updateFileView(path);
     	}
-        updateByStatus();
     }
     
     private void stop(){
     	MPApplication.smpService.stop();
-    	updateByStatus();
     }
     
     private void setHandler(){
@@ -145,8 +141,8 @@ public class PlayerActivity extends Activity {
     
     private void processIntent(){
     	Intent intent = getIntent();
-    	if (intent.getSerializableExtra("music") instanceof MusicInfo){
-    		musicInfo = (MusicInfo) intent.getSerializableExtra("music");
+    	if (intent.getParcelableExtra("music") instanceof MusicInfo){
+    		musicInfo = (MusicInfo) intent.getParcelableExtra("music");
     		if (musicInfo != null){
     			playOrPause(musicInfo.data);
     		}
@@ -156,68 +152,64 @@ public class PlayerActivity extends Activity {
 
    @Override
     protected void onDestroy() {
-       handler.removeCallbacks(r);
+	   MPApplication.smpService.removeObserver(this);
        if (TCPServer.pt != null)
     	   TCPServer.pt.unRegisterHandler(controlHandler);
-       
         super.onDestroy();
     }
+    
+    private void updateFileView(String path){
+    	if (path == null){
+    		fileView.setText(getResources().getString(R.string.t_idle));
+    		return;
+    	}
+    	int i = path.lastIndexOf("/");
+    	path = path.substring(i+1);
+    	fileView.setText(path);
+    }
 
-    protected void updateByStatus() {
-        if (MPApplication.smpService == null){
-            return;
-        }
-        int pos=MPApplication.smpService.getCurrentPosition();
-        
-        if (MPApplication.smpService.getState() == STATE.IDLE){
-            playButton.setText("²¥·Å");
+	@Override
+	public void update(String path, STATE state, int curPos, int duration) {
+        if (state == STATE.IDLE){
+            playButton.setText(getResources().getString(R.string.s_play));
             stopButton.setEnabled(false);
             stateTextView.setText(getResources().getString(R.string.t_idle));
-            fileView.setText("");
-        }else if (MPApplication.smpService.getState() == STATE.PALYING){
-            playButton.setText("ÔÝÍ£");
+            updateFileView(null);
+        }else if (state == STATE.PALYING){
+            playButton.setText(getResources().getString(R.string.s_pause));
             stopButton.setEnabled(true);
             stateTextView.setText(getResources().getString(R.string.t_playing));
-        }else if (MPApplication.smpService.getState() == STATE.PAUSE){
-            playButton.setText("¼ÌÐø");
+            updateFileView(path);
+        }else if (state == STATE.PAUSE){
+            playButton.setText(getResources().getString(R.string.s_continue));
             stopButton.setEnabled(true);
             stateTextView.setText(getResources().getString(R.string.t_pause));
-        }else if (MPApplication.smpService.getState() == STATE.STOP){
-            playButton.setText("²¥·Å");
+            updateFileView(path);
+        }else if (state == STATE.STOP){
+            playButton.setText(getResources().getString(R.string.s_play));
             stopButton.setEnabled(false);
             stateTextView.setText(getResources().getString(R.string.t_stop));
+            updateFileView(path);
         }
-        /*if (MPApplication.smpService.getState() != STATE.IDLE){
-            fileView.setText(musicInfo.name);
-        }*/
         String s1, s2;
         
-        int min = (pos/1000)/60;
-        int sec = (pos/1000)%60;
+        int min = (curPos/1000)/60;
+        int sec = (curPos/1000)%60;
         s1 = new DecimalFormat("00").format(min);
         s2 = new DecimalFormat("00").format(sec);
         timeView1.setText(s1+":"+s2);
 
         String s3, s4;
-        int pos2=MPApplication.smpService.getDuration();
-        int min2 = (pos2/1000)/60;
-        int sec2 = (pos2/1000)%60;
+        int min2 = (duration/1000)/60;
+        int sec2 = (duration/1000)%60;
         s3 = new DecimalFormat("00").format(min2);
         s4 = new DecimalFormat("00").format(sec2);
         timeView2.setText(" / "+s3+":"+s4);
         if (!preFile.equals(musicInfo.data)){
             preFile = musicInfo.data;
-            sb.setMax(pos2);
+            sb.setMax(duration);
         }
-        sb.setProgress(pos);
-    }
-    
-    private Runnable r = new Runnable() {
-            
-            public void run() {
-                updateByStatus();
-                handler.postDelayed(r, 1000);
-            }
-    };
+        sb.setProgress(curPos);
+	}
         
 }
